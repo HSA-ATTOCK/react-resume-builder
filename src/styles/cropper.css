@@ -1,0 +1,166 @@
+/* ===== CSS Variables ===== */
+:root {
+  --cropper-overlay: rgba(0, 0, 0, 0.6);
+  --cropper-bg: #ffffff;
+  --cropper-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --cropper-radius: 10px;
+  --cropper-container-bg: #333;
+  --primary-btn: #2563eb;
+  --primary-btn-hover: #1d4ed8;
+  --cancel-btn: #e5e7eb;
+  --cancel-btn-hover: #d1d5db;
+  --text-dark: #333333;
+}
+
+/* ===== Modal Overlay ===== */
+.cropper-modal {
+  position: fixed;
+  inset: 0;
+  background: var(--cropper-overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+  backdrop-filter: blur(2px);
+}
+
+/* ===== Cropping Popup Box ===== */
+.cropper-popup {
+  background: var(--cropper-bg);
+  padding: 1.5rem;
+  border-radius: var(--cropper-radius);
+  width: 90%;
+  max-width: min(400px, 90vw);
+  box-shadow: var(--cropper-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ===== Cropper Canvas ===== */
+.cropper-container {
+  position: relative;
+  width: 100%;
+  height: min(300px, 60vh);
+  min-height: 200px;
+  background: var(--cropper-container-bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ===== Zoom Controls ===== */
+.cropper-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cropper-controls input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+}
+
+.cropper-controls input[type="range"]:hover {
+  background: #d1d5db;
+}
+
+.cropper-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-btn);
+  cursor: pointer;
+}
+
+.cropper-controls input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-btn);
+  cursor: pointer;
+}
+
+/* ===== Action Buttons ===== */
+.cropper-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.cropper-buttons button {
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Primary Button */
+.cropper-buttons button:not(.cancel) {
+  background-color: var(--primary-btn);
+  color: white;
+}
+
+.cropper-buttons button:not(.cancel):hover {
+  background-color: var(--primary-btn-hover);
+  transform: translateY(-1px);
+}
+
+.cropper-buttons button:not(.cancel):active {
+  transform: translateY(0);
+}
+
+/* Cancel Button */
+.cropper-buttons button.cancel {
+  background: var(--cancel-btn);
+  color: var(--text-dark);
+}
+
+.cropper-buttons button.cancel:hover {
+  background: var(--cancel-btn-hover);
+}
+
+/* Disabled State */
+.cropper-buttons button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 480px) {
+  .cropper-popup {
+    padding: 1rem;
+  }
+
+  .cropper-buttons {
+    justify-content: space-between;
+  }
+
+  .cropper-buttons button {
+    flex: 1;
+    padding: 0.5rem;
+  }
+}

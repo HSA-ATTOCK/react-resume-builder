@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "node server.js"
+    "preview": "vite preview",
+    "start": "node server.js",
+    "render-build": "npm install && npm run build"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
@@ -15,9 +17,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-easy-crop": "^5.4.2",
+    "@vitejs/plugin-react": "^4.4.1",
     "vite": "^6.3.5"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.4.1"
   }
 }

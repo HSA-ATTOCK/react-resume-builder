@@ -14,10 +14,10 @@
     "jspdf": "^3.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-easy-crop": "^5.4.2"
+    "react-easy-crop": "^5.4.2",
+    "vite": "^6.3.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.4.1",
-    "vite": "^6.3.5"
+    "@vitejs/plugin-react": "^4.4.1"
   }
 }

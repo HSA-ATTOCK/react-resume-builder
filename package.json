@@ -11,8 +11,7 @@
   "build": "vite build",
   "preview": "vite preview",
   "start": "node server.js",
-  "render-build": "rm -rf dist && npm ci && npm run build && cp -r public/. dist/",
-    "debug-build": "rm -rf dist && npm run build && ls -la dist && du -sh dist"
+  "render-build": "rm -rf dist && npm ci && npm run build"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",

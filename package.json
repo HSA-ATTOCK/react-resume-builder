@@ -8,10 +8,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "node server.js",
-    "render-build": "npm ci && npm run build"
+  "build": "vite build",
+  "preview": "vite preview",
+  "start": "node server.js",
+  "render-build": "rm -rf dist && npm ci && npm run build && cp -r public/. dist/"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",

@@ -13,7 +13,7 @@ const ResumePreview = ({ formData }) => {
     setIsGeneratingPDF(true);
 
     try {
-      // 1. Prepare the DOM for high-quality capture
+      // 1. Prepare the DOM
       const originalStyles = [];
       const noPrintElements = document.querySelectorAll(".no-print");
 
@@ -26,21 +26,32 @@ const ResumePreview = ({ formData }) => {
         el.style.display = "none";
       });
 
-      // 2. Calculate optimal scale for high resolution (4x for ultra HD)
-      const scale = 4; // Fixed high scale for maximum quality
-      const dpi = 300; // Target print quality
+      // 2. Optimized settings with improved text rendering
+      const scale = 2;
+      const dpi = 150;
 
-      // 3. Ultra-high-quality capture
+      // 3. Capture with optimized settings for justify alignment
       const canvas = await html2canvas(resumeRef.current, {
         scale,
         useCORS: true,
-        letterRendering: true,
+        letterRendering: true, // Critical for proper text alignment
         backgroundColor: "#ffffff",
         logging: false,
         allowTaint: false,
-        quality: 1, // Maximum quality
-        dpi, // High DPI for print quality
+        quality: 0.95,
+        dpi,
         onclone: (clonedDoc) => {
+          // Force justify alignment in the cloned document
+          const containers = clonedDoc.querySelectorAll(
+            ".preview-container, p, .text-justify"
+          );
+          containers.forEach((el) => {
+            el.style.textAlign = "justify";
+            el.style.textJustify = "inter-word";
+            el.style.wordSpacing = "normal";
+            el.style.letterSpacing = "normal";
+          });
+
           clonedDoc.querySelectorAll(".no-print").forEach((el) => {
             el.style.visibility = "hidden";
           });
@@ -53,37 +64,36 @@ const ResumePreview = ({ formData }) => {
         style.element.style.visibility = style.visibility;
       });
 
-      // 5. Calculate PDF dimensions (maintaining your original approach)
+      // 5. Calculate PDF dimensions
       const pxToMm = (px) => px * 0.264583;
       const pdfWidth = pxToMm(canvas.width) / scale;
       const pdfHeight = pxToMm(canvas.height) / scale;
 
-      // 6. Create PDF with ultra-high quality settings
+      // 6. Create PDF with optimized settings
       const pdf = new jsPDF({
         orientation: "p",
         unit: "mm",
         format: [pdfWidth, pdfHeight],
-        hotfixes: ["px_scaling"],
-        filters: [],
+        compress: true,
       });
 
-      // 7. Add image with best quality settings
+      // 7. Add image with optimized settings (PNG for better text quality)
       pdf.addImage(
-        canvas.toDataURL("image/png", 1.0), // PNG for lossless quality
+        canvas.toDataURL("image/png", 1.0), // Using PNG for sharper text
         "PNG",
-        0, // x offset (full bleed)
-        0, // y offset (full bleed)
+        0,
+        0,
         pdfWidth,
         pdfHeight,
         undefined,
-        "NONE" // No compression for maximum quality
+        "FAST"
       );
 
       // 8. Save the PDF
       pdf.save(`${formData.fullName || "resume"}_${new Date().getTime()}.pdf`);
     } catch (error) {
-      console.error("Ultra HD PDF generation failed:", error);
-      alert("Failed to generate high-quality PDF. Please try again.");
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -170,13 +180,13 @@ const ResumePreview = ({ formData }) => {
             )}
           </div>
         </div>
-
         {/* === Personal Details === */}
         {(formData.dob ||
           formData.nationality ||
           formData.religion ||
           formData.maritalStatus ||
-          formData.license) && (
+          formData.license ||
+          formData.links?.length > 0) && ( // Added links check here
           <section>
             <h2 className="resume-section-title">Personal Details</h2>
             {formData.dob && (
@@ -204,9 +214,30 @@ const ResumePreview = ({ formData }) => {
                 <strong>Driving License:</strong> {formData.license}
               </p>
             )}
+            {/* Added Links Section */}
+            {formData.links?.length > 0 && (
+              <div className="resume-links">
+                <p>
+                  <strong>Links:</strong>
+                </p>
+                <ul style={{ marginTop: "5px", paddingLeft: "20px" }}>
+                  {formData.links.map((link, index) => (
+                    <li key={index} style={{ marginBottom: "5px" }}>
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#0066cc", textDecoration: "none" }}
+                      >
+                        {link.url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
-
         {/* === Profile Summary === */}
         {formData.profile && (
           <section>
@@ -214,7 +245,6 @@ const ResumePreview = ({ formData }) => {
             <p>{formData.profile}</p>
           </section>
         )}
-
         {/* === Objective === */}
         {formData.objective && (
           <section>
@@ -222,45 +252,82 @@ const ResumePreview = ({ formData }) => {
             <p>{formData.objective}</p>
           </section>
         )}
-
         {/* === Education === */}
         {formData.education?.length > 0 && (
           <section>
             <h2 className="resume-section-title">Education</h2>
             {formData.education.map((edu, idx) => (
-              <div key={idx} className="resume-subsection">
-                <p className="resume-subtitle">{edu.institute}</p>
-                <p className="resume-italic">{edu.degree}</p>
-                {edu.period && <p className="resume-period">{edu.period}</p>}
-              </div>
+              <React.Fragment key={idx}>
+                <div className="resume-subsection">
+                  {/* Add numbered prefix */}
+                  {/* <div className="education-number">{idx + 1}.</div> */}
+                  <div className="education-content">
+                    <p className="resume-subtitle">
+                      <strong>{idx + 1}.</strong> {edu.institute}
+                    </p>
+                    <p className="resume-italic">{edu.degree}</p>
+                    {edu.period && (
+                      <p className="resume-period">{edu.period}</p>
+                    )}
+                  </div>
+                </div>
+                {/* Add separator except after last item */}
+                {idx !== formData.education.length - 1 && (
+                  <hr className="education-separator" />
+                )}
+              </React.Fragment>
             ))}
           </section>
         )}
-
         {/* === Projects === */}
         {formData.projects?.length > 0 && (
           <section>
             <h2 className="resume-section-title">Projects</h2>
             {formData.projects.map((project, idx) => (
-              <div key={idx} className="resume-subsection">
-                <h3 className="resume-subtitle">{project.title}</h3>
-                {project.role && (
-                  <p className="resume-italic">{project.role}</p>
+              <React.Fragment key={idx}>
+                <div key={idx} className="resume-subsection">
+                  <h3 className="resume-subtitle">
+                    {idx + 1}. {project.title}
+                  </h3>
+                  {project.role && (
+                    <p className="resume-italic">
+                      <strong>Role: </strong>
+                      {project.role}
+                    </p>
+                  )}
+                  {project.period && (
+                    <p className="resume-period">{project.period}</p>
+                  )}
+                  {/* Modified link box to show full URL */}
+                  {project.link && (
+                    <div className="project-link-box">
+                      <strong>Link: </strong>
+                      <a
+                        href={project.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#0066cc", textDecoration: "none" }}
+                        // className="project-link"
+                      >
+                        {project.link}
+                      </a>
+                    </div>
+                  )}
+                  {project.description && <p>{project.description}</p>}
+                  {project.skills && (
+                    <p className="resume-note">
+                      <strong>Skills:</strong> {project.skills}
+                    </p>
+                  )}
+                </div>
+                {/* Add separator except after last item */}
+                {idx !== formData.projects.length - 1 && (
+                  <hr className="project-separator" />
                 )}
-                {project.period && (
-                  <p className="resume-period">{project.period}</p>
-                )}
-                {project.description && <p>{project.description}</p>}
-                {project.skills && (
-                  <p className="resume-note">
-                    <strong>Skills:</strong> {project.skills}
-                  </p>
-                )}
-              </div>
+              </React.Fragment>
             ))}
           </section>
         )}
-
         {/* === Work Experience === */}
         {formData.experience?.length > 0 && (
           <section>
@@ -279,7 +346,6 @@ const ResumePreview = ({ formData }) => {
             ))}
           </section>
         )}
-
         {/* === Skills === */}
         {formData.skills && (
           <section>
@@ -287,7 +353,6 @@ const ResumePreview = ({ formData }) => {
             <p>{formData.skills}</p>
           </section>
         )}
-
         {/* === Languages === */}
         {formData.languages && (
           <section>

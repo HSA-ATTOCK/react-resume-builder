@@ -1,40 +1,34 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs');  // Add this at the top
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Verify dist folder exists
+// Debug: Check if 'dist' exists
 const distPath = path.join(__dirname, 'dist');
 if (!fs.existsSync(distPath)) {
-  console.error('❌ Error: dist folder not found. Did you run "npm run build"?');
+  console.error('❌ Error: "dist" folder missing. Run "npm run build" first.');
   process.exit(1);
 }
+
+// Debug: List files in 'dist'
+console.log('Files in "dist":', fs.readdirSync(distPath));
 
 app.use(express.static(distPath, {
   setHeaders: (res) => {
     res.set('Cache-Control', 'public, max-age=31536000');
-  },
-  fallthrough: false // Important for strict static file serving
-}));
-
-app.get('*', (req, res, next) => {
-  const indexPath = path.join(distPath, 'index.html');
-  if (!fs.existsSync(indexPath)) {
-    return res.status(500).send('Application not built properly - missing index.html');
   }
-  res.sendFile(indexPath, (err) => {
-    if (err) next(err);
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Failed to load index.html:', err);
+      res.status(500).send('Application build is corrupted.');
+    }
   });
 });
 
-app.use((err, req, res, next) => {
-  console.error('❌ Server error:', err.stack);
-  res.status(500).send('Application error - check server logs');
-});
-
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`Serving from: ${distPath}`);
-  console.log('Available files:', fs.readdirSync(distPath));
+  console.log(`✅ Server running on port ${PORT}`);
 });

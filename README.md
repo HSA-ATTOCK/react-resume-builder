@@ -18,7 +18,7 @@ A clean, customizable, and fully responsive Resume Builder built with **React**.
 
 ## Preview
 
-![preview](https://github.com/your-username/resume-builder/blob/main/preview.png)
+![preview](https://github.com/HSA-ATTOCK/react-resume-builder/blob/main/preview.png)
 
 ---
 

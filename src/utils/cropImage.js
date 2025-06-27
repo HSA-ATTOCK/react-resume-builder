@@ -15,42 +15,26 @@ export function createImage(url) {
     }
 
     const img = new Image();
+    img.crossOrigin = "anonymous"; // Allow CORS
 
-    // Handle cross-origin images
-    img.crossOrigin = "anonymous";
-
-    // Add cleanup function to revoke object URL if needed
-    let shouldRevoke = url.startsWith("blob:");
-
-    img.onload = () => {
-      if (shouldRevoke) {
-        URL.revokeObjectURL(url);
-      }
-      resolve(img);
-    };
-
-    img.onerror = (err) => {
-      if (shouldRevoke) {
-        URL.revokeObjectURL(url);
-      }
-      reject(new Error(`Failed to load image: ${err.message}`));
-    };
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(new Error(`Failed to load image: ${err.message}`));
 
     img.src = url;
   });
 }
 
 /**
- * Generates a cropped version of the source image
+ * Generates a cropped base64 image from a given image and crop area
  * @param {string} imageSrc - Source image URL
- * @param {Object} crop - Crop dimensions and position
+ * @param {Object} crop - Crop dimensions
  * @param {number} crop.x - X coordinate of crop start
  * @param {number} crop.y - Y coordinate of crop start
  * @param {number} crop.width - Width of crop area
  * @param {number} crop.height - Height of crop area
  * @param {string} [fileType='image/jpeg'] - Output image type
- * @param {number} [quality=0.9] - Image quality (0-1)
- * @returns {Promise<string>} Promise that resolves with the cropped image URL
+ * @param {number} [quality=0.9] - Quality (0 to 1)
+ * @returns {Promise<string>} Base64 Data URL of the cropped image
  */
 export async function getCroppedImg(
   imageSrc,
@@ -67,15 +51,11 @@ export async function getCroppedImg(
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    if (!ctx) {
-      throw new Error("Could not get canvas context");
-    }
+    if (!ctx) throw new Error("Could not get canvas context");
 
-    // Set canvas dimensions to match crop area
     canvas.width = Math.floor(crop.width);
     canvas.height = Math.floor(crop.height);
 
-    // Draw the cropped image
     ctx.drawImage(
       image,
       Math.floor(crop.x),
@@ -88,36 +68,10 @@ export async function getCroppedImg(
       Math.floor(crop.height)
     );
 
-    // Return as blob URL
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error("Canvas is empty"));
-            return;
-          }
-
-          // Safari has memory limits with blob URLs
-          // So we'll use a different approach if needed
-          const croppedImageUrl = URL.createObjectURL(blob);
-          resolve(croppedImageUrl);
-        },
-        fileType,
-        quality
-      );
-    });
+    // ✅ Return as base64 Data URL for compatibility on Vercel
+    return canvas.toDataURL(fileType, quality);
   } catch (error) {
     console.error("Image cropping failed:", error);
-    throw error; // Re-throw for error handling in calling code
-  }
-}
-
-/**
- * Cleanup function to revoke object URLs
- * @param {string} url - The object URL to revoke
- */
-export function revokeObjectUrl(url) {
-  if (url && url.startsWith("blob:")) {
-    URL.revokeObjectURL(url);
+    throw error;
   }
 }

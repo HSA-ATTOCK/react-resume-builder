@@ -12,6 +12,7 @@
     "express": "^4.21.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
+    "prop-types": "^15.8.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-easy-crop": "^5.4.2"

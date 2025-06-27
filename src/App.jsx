@@ -13,6 +13,7 @@ const INITIAL_RESUME_DATA = {
   profile: "",
   objective: "",
   skills: "",
+  link: "",
   languages: "",
   dob: "",
   nationality: "",

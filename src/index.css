@@ -70,39 +70,6 @@ body {
   box-sizing: border-box;
 }
 
-/* Add this to your stylesheet */
-/* .preview-container { */
-/* Text alignment and justification */
-/* text-align: justify; */
-/* More consistent spacing than inter-word */
-/* text-justify: inter-character; */
-
-/* Hyphenation control */
-/* hyphens: auto; */
-/* Safari support */
-/* -webkit-hyphens: auto; */
-/* Firefox support */
-/* -moz-hyphens: auto; */
-/* min-length before-hyphen after-hyphen */
-/* hyphenate-limit-chars: 6 3 2; */
-/* max consecutive hyphenated lines */
-/* hyphenate-limit-lines: 2; */
-
-/* Optimal spacing control */
-/* Slightly tighter word spacing */
-/* word-spacing: -0.05em; */
-/* Slightly looser letter spacing */
-/* letter-spacing: 0.01em; */
-
-/* Paragraph optimization */
-/* Better readability for justified text */
-/* line-height: 1.4; */
-/* Minimum lines at bottom of page */
-/* orphans: 3; */
-/* Minimum lines at top of page */
-/* widows: 3; */
-/* } */
-
 /* ===== Typography ===== */
 h1,
 h2,
@@ -247,53 +214,6 @@ h4 {
   font-size: var(--text-xs);
   color: var(--text-lighter);
   margin-top: var(--space-xs);
-}
-
-/* Project Link Box Styles */
-.project-link-box {
-  margin: 8px 0;
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-
-.project-link {
-  display: inline-block;
-  padding: 6px 12px;
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #0066cc;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  word-break: break-all;
-}
-
-.project-link:hover {
-  background-color: #e9e9e9;
-  text-decoration: underline;
-}
-
-.project-link:active {
-  background-color: #ddd;
-}
-
-/* .project-link li {
-  position: relative;
-  padding-left: 15px;
-}
-
-.project-link li:before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: #0066cc;
-} */
-
-.project-separator {
-  border: 0;
-  border-top: 1px dashed #ccc;
-  margin: 15px 0;
 }
 
 /* ===== Input Styles ===== */
@@ -552,52 +472,6 @@ textarea.input {
   font-family: monospace;
 }
 
-/* Links Management Styles */
-.link-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.link-item input[type="url"] {
-  flex: 1;
-  min-width: 0;
-}
-
-.remove-link-btn {
-  background: none;
-  border: none;
-  color: #ff4444;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px 8px;
-}
-
-.remove-link-btn:hover {
-  color: #cc0000;
-}
-
-.add-link-btn {
-  background: none;
-  border: 1px dashed #ccc;
-  color: #0066cc;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  width: 100%;
-  text-align: center;
-}
-
-.add-link-btn:hover {
-  border-color: #0066cc;
-  background-color: #f0f7ff;
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
 /* ===== Resume Preview ===== */
 .preview-container {
   padding: var(--space-lg);
@@ -738,40 +612,6 @@ textarea.input {
   line-height: 1.6;
 }
 
-/* Links in Preview */
-.resume-links {
-  margin-top: 10px;
-}
-
-.resume-links a:hover {
-  text-decoration: underline;
-  color: #004499;
-}
-
-.resume-links ul {
-  list-style-type: none;
-}
-
-.resume-links li {
-  position: relative;
-  padding-left: 15px;
-}
-
-.resume-links li:before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: #0066cc;
-}
-
-/* Education Separator */
-
-.education-separator {
-  border: 0;
-  border-top: 1px dashed #ccc;
-  margin: 15px 0;
-}
-
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
   body {
@@ -873,85 +713,4 @@ textarea.input {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-
-/* Mobile specific styles */
-.mobile-view .preview-content {
-  transform: scale(0.85);
-  transform-origin: top left;
-  width: 100%;
-  overflow-x: auto;
-  padding: 10px;
-  box-sizing: border-box;
-}
-
-.mobile-warning {
-  background: #fff3cd;
-  color: #856404;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 14px;
-}
-
-/* PDF source styles */
-.pdf-source {
-  width: 794px !important;
-  padding: 40px !important;
-  background: white !important;
-  box-sizing: border-box;
-}
-
-.pdf-source .resume-section {
-  page-break-inside: avoid;
-  break-inside: avoid;
-  margin-bottom: 20px;
-}
-
-/* Ensure consistent styling for PDF */
-.pdf-source .resume-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.pdf-source .resume-photo img {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 50%;
-  margin-right: 20px;
-}
-
-.pdf-source .resume-section-title {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-  margin-bottom: 15px;
-  font-size: 18px;
-}
-
-/* Download button styles */
-.download-btn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.download-btn:disabled {
-  background: #cccccc;
-  cursor: not-allowed;
-}
-
-.download-btn svg {
-  width: 18px;
-  height: 18px;
 }

@@ -45,29 +45,6 @@ function ResumeForm({ formData, setFormData }) {
     [setFormData]
   );
 
-  const addNewLink = () => {
-    setFormData((prev) => ({
-      ...prev,
-      links: [...(prev.links || []), { url: "" }],
-    }));
-  };
-
-  const removeLink = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      links: prev.links?.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleLinkChange = (index, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      links: prev.links?.map((link, i) =>
-        i === index ? { ...link, url: value } : link
-      ),
-    }));
-  };
-
   const updateNestedArray = useCallback(
     (section, index, key, value) => {
       setFormData((prev) => ({
@@ -370,7 +347,6 @@ function ResumeForm({ formData, setFormData }) {
                   role: "",
                   description: "",
                   skills: "",
-                  link: "",
                 })
               }
               className="btn-link"
@@ -395,26 +371,12 @@ function ResumeForm({ formData, setFormData }) {
                     id={`${field}-${i}`}
                     value={proj[field]}
                     onChange={(e) =>
-                      updateNestedArray("projects", i, "field", e.target.value)
+                      updateNestedArray("projects", i, field, e.target.value)
                     }
                     className="input"
                   />
                 </div>
               ))}
-              {/* Link Input Field (stays in form) */}
-              <div className="form-group">
-                <label htmlFor={`link-${i}`}>Project Link (URL)</label>
-                <input
-                  id={`link-${i}`}
-                  type="url"
-                  value={proj.link || ""}
-                  onChange={(e) =>
-                    updateNestedArray("projects", i, "link", e.target.value)
-                  }
-                  className="input"
-                  placeholder="https://example.com"
-                />
-              </div>
               <div className="form-group">
                 <label htmlFor={`description-${i}`}>Description</label>
                 <textarea
@@ -432,7 +394,6 @@ function ResumeForm({ formData, setFormData }) {
                   rows={3}
                 />
               </div>
-              {/* Removed the clickable link box from form */}
             </div>
           ))}
         </section>
@@ -455,37 +416,6 @@ function ResumeForm({ formData, setFormData }) {
                 />
               </div>
             ))}
-
-            {/* Links Management Section */}
-            <div className="form-group full-width">
-              <label>Links</label>
-              {formData.links?.map((link, index) => (
-                <div key={index} className="link-item">
-                  <input
-                    type="url"
-                    value={link.url || ""}
-                    onChange={(e) => handleLinkChange(index, e.target.value)}
-                    className="input"
-                    placeholder="https://example.com"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeLink(index)}
-                    className="remove-link-btn"
-                    aria-label="Remove link"
-                  >
-                    ✖
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addNewLink}
-                className="add-link-btn"
-              >
-                + Add Link
-              </button>
-            </div>
           </div>
         </section>
       </form>

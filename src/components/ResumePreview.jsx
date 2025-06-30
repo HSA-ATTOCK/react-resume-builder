@@ -27,7 +27,7 @@ const ResumePreview = ({ formData }) => {
       });
 
       // 2. Calculate optimal scale for high resolution (4x for ultra HD)
-      const scale = 4; // Fixed high scale for maximum quality
+      const scale = 2;
       const dpi = 300; // Target print quality
 
       // 3. Ultra-high-quality capture
@@ -38,7 +38,7 @@ const ResumePreview = ({ formData }) => {
         backgroundColor: "#ffffff",
         logging: false,
         allowTaint: false,
-        quality: 1, // Maximum quality
+        // quality: 1, // Maximum quality
         dpi, // High DPI for print quality
         onclone: (clonedDoc) => {
           clonedDoc.querySelectorAll(".no-print").forEach((el) => {

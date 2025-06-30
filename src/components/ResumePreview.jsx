@@ -206,7 +206,7 @@ const ResumePreview = ({ formData }) => {
             )}
             {formData.customLinks?.length > 0 && (
               <section>
-                <h2 className="resume-section-title">Custom Links</h2>
+                <h2 className="resume-section-title">Social Links</h2>
                 <ul>
                   {formData.customLinks.map((link, idx) => (
                     <li key={idx}>

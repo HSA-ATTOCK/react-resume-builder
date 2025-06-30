@@ -22,6 +22,7 @@ const INITIAL_RESUME_DATA = {
   education: [{ institute: "", degree: "" }],
   experience: [{ title: "", company: "", period: "", details: [""] }],
   projects: [{ title: "", role: "", description: "", skills: "" }],
+  customLinks: [{ title: "", url: "" }],
 };
 
 // Custom hook for localStorage persistence

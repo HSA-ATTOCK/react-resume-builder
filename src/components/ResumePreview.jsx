@@ -204,6 +204,25 @@ const ResumePreview = ({ formData }) => {
                 <strong>Driving License:</strong> {formData.license}
               </p>
             )}
+            {formData.customLinks?.length > 0 && (
+              <section>
+                <h2 className="resume-section-title">Custom Links</h2>
+                <ul>
+                  {formData.customLinks.map((link, idx) => (
+                    <li key={idx}>
+                      <strong>{link.title || "Link"}:</strong>{" "}
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {link.url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </section>
         )}
 
@@ -254,6 +273,18 @@ const ResumePreview = ({ formData }) => {
                 {project.skills && (
                   <p className="resume-note">
                     <strong>Skills:</strong> {project.skills}
+                  </p>
+                )}
+                {project.link && (
+                  <p className="project-link">
+                    <strong>Link:</strong>{" "}
+                    <a
+                      href={project.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {project.link}
+                    </a>
                   </p>
                 )}
               </div>
@@ -312,6 +343,12 @@ ResumePreview.propTypes = {
     religion: PropTypes.string,
     maritalStatus: PropTypes.string,
     license: PropTypes.string,
+    customLinks: PropTypes.arrayOf(
+      PropTypes.shape({
+        title: PropTypes.string,
+        url: PropTypes.string,
+      })
+    ),
     profile: PropTypes.string,
     objective: PropTypes.string,
     education: PropTypes.arrayOf(
@@ -328,6 +365,7 @@ ResumePreview.propTypes = {
         period: PropTypes.string,
         description: PropTypes.string,
         skills: PropTypes.string,
+        Link: PropTypes.string,
       })
     ),
     experience: PropTypes.arrayOf(

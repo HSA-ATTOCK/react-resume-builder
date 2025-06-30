@@ -5,6 +5,8 @@ function ResumeForm({ formData, setFormData }) {
   const [cropImage, setCropImage] = useState(null);
   const fileInputRef = useRef(null);
 
+  console.log("Custom Links:", formData.customLinks);
+
   // Memoized handlers for better performance
   const handleChange = useCallback(
     (e) => {
@@ -61,7 +63,7 @@ function ResumeForm({ formData, setFormData }) {
     (section, newItem) => {
       setFormData((prev) => ({
         ...prev,
-        [section]: [...prev[section], newItem],
+        [section]: [...(prev[section] || []), newItem], // ✅ fallback to empty array
       }));
     },
     [setFormData]
@@ -71,23 +73,28 @@ function ResumeForm({ formData, setFormData }) {
     (section, index) => {
       setFormData((prev) => ({
         ...prev,
-        [section]: prev[section].filter((_, i) => i !== index),
+        [section]: (prev[section] || []).filter((_, i) => i !== index), // ✅ fallback
       }));
     },
     [setFormData]
   );
 
   // Field configuration for DRY code
-  const personalInfoFields = ["fullName", "phone", "whatsapp", "email"];
+  const personalInfoFields = [
+    "fullName",
+    "phone",
+    "whatsapp",
+    "email",
+    "dob",
+    "nationality",
+    "license",
+  ];
   const textAreaFields = ["profile", "objective"];
   const additionalInfoFields = [
     "skills",
     "languages",
-    "dob",
-    "nationality",
-    "religion",
-    "maritalStatus",
-    "license",
+    // "religion",
+    // "maritalStatus",
   ];
 
   return (
@@ -156,6 +163,61 @@ function ResumeForm({ formData, setFormData }) {
               </div>
             ))}
           </div>
+          {/* Custom Link Section */}
+          <div className="section-header">
+            <h3 className="section-subtitle">🔗 Social Links</h3>
+            <button
+              type="button"
+              onClick={() => addItem("customLinks", { title: "", url: "" })}
+              className="btn-link"
+            >
+              + Add Link
+            </button>
+          </div>
+
+          {formData.customLinks?.map((link, i) => (
+            <div className="card" key={i}>
+              <button
+                type="button"
+                onClick={() => removeItem("customLinks", i)}
+                className="remove-btn"
+                aria-label="Remove link"
+              >
+                ✖
+              </button>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label htmlFor={`link-title-${i}`}>Title</label>
+                  <input
+                    id={`link-title-${i}`}
+                    value={link.title}
+                    onChange={(e) =>
+                      updateNestedArray(
+                        "customLinks",
+                        i,
+                        "title",
+                        e.target.value
+                      )
+                    }
+                    className="input"
+                    placeholder="e.g., GitHub"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor={`link-url-${i}`}>URL</label>
+                  <input
+                    id={`link-url-${i}`}
+                    value={link.url}
+                    onChange={(e) =>
+                      updateNestedArray("customLinks", i, "url", e.target.value)
+                    }
+                    className="input"
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
 
           {textAreaFields.map((field) => (
             <div className="form-group" key={field}>
@@ -347,6 +409,7 @@ function ResumeForm({ formData, setFormData }) {
                   role: "",
                   description: "",
                   skills: "",
+                  Link: "",
                 })
               }
               className="btn-link"
@@ -364,6 +427,7 @@ function ResumeForm({ formData, setFormData }) {
               >
                 ✖
               </button>
+
               {["title", "role", "skills"].map((field) => (
                 <div className="form-group" key={field}>
                   <label htmlFor={`${field}-${i}`}>{field}</label>
@@ -377,6 +441,21 @@ function ResumeForm({ formData, setFormData }) {
                   />
                 </div>
               ))}
+
+              {/* ✅ Add Link Input */}
+              <div className="form-group">
+                <label htmlFor={`link-${i}`}>Project Link</label>
+                <input
+                  id={`link-${i}`}
+                  value={proj.link || proj.Link}
+                  onChange={(e) =>
+                    updateNestedArray("projects", i, "link", e.target.value)
+                  }
+                  className="input"
+                  placeholder="https://github.com/username/project"
+                />
+              </div>
+
               <div className="form-group">
                 <label htmlFor={`description-${i}`}>Description</label>
                 <textarea
@@ -402,20 +481,27 @@ function ResumeForm({ formData, setFormData }) {
         <section className="section">
           <h2 className="section-title">📄 Additional Information</h2>
           <div className="grid-2">
-            {additionalInfoFields.map((field) => (
-              <div className="form-group" key={field}>
-                <label htmlFor={field}>
-                  {field.replace(/([A-Z])/g, " $1")}
-                </label>
-                <input
-                  id={field}
-                  name={field}
-                  value={formData[field] || ""}
-                  onChange={handleChange}
-                  className="input"
-                />
-              </div>
-            ))}
+            {additionalInfoFields
+              // .filter(
+              //   (field) =>
+              //     !["github", "linkedin", "portfolio", "twitter"].includes(
+              //       field
+              //     )
+              // )
+              .map((field) => (
+                <div className="form-group" key={field}>
+                  <label htmlFor={field}>
+                    {field.replace(/([A-Z])/g, " $1")}
+                  </label>
+                  <input
+                    id={field}
+                    name={field}
+                    value={formData[field] || ""}
+                    onChange={handleChange}
+                    className="input"
+                  />
+                </div>
+              ))}
           </div>
         </section>
       </form>

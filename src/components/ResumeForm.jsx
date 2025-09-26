@@ -82,6 +82,7 @@ function ResumeForm({ formData, setFormData }) {
   // Field configuration for DRY code
   const personalInfoFields = [
     "fullName",
+    "title",
     "phone",
     "whatsapp",
     "email",

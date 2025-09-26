@@ -233,6 +233,15 @@ const ResumePreview = ({ formData }) => {
         pdf.setFont("helvetica", "bold");
         pdf.text(formData.fullName, margin, currentY);
         currentY += 8;
+        // Render title under the name if provided
+        if (formData.title) {
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(formData.title, margin, currentY + 2);
+          currentY += 8;
+          pdf.setTextColor(0, 0, 0);
+        }
       }
 
       // Add profile image if available (shifted slightly up)
@@ -633,6 +642,7 @@ const ResumePreview = ({ formData }) => {
 
           <div className="resume-header-text">
             <h1 className="resume-name">{formData.fullName || "Your Name"}</h1>
+            {formData.title && <p className="resume-title">{formData.title}</p>}
             {(formData.phone || formData.whatsapp) && (
               <p className="resume-contact">
                 <strong>
@@ -820,6 +830,7 @@ const ResumePreview = ({ formData }) => {
 ResumePreview.propTypes = {
   formData: PropTypes.shape({
     fullName: PropTypes.string,
+    title: PropTypes.string,
     photo: PropTypes.string,
     phone: PropTypes.string,
     whatsapp: PropTypes.string,

@@ -1,3 +1,90 @@
+/* Dedicated class to apply during PDF export to ensure predictable layout */
+.pdf-export {
+  font-family: Arial, Helvetica, sans-serif !important;
+  color: #222 !important;
+  background: #fff !important;
+  width: 180mm !important;
+  max-width: 180mm !important;
+  box-sizing: border-box !important;
+  padding: 16mm 15mm !important;
+  margin: 0 auto !important;
+  border: 1px solid #ccc !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.pdf-export .resume-header {
+  display: block !important;
+  text-align: left !important;
+  border-bottom: 1px solid #ccc !important;
+  margin-bottom: 10mm !important;
+  padding-bottom: 4mm !important;
+}
+.pdf-export .resume-header-text {
+  margin-left: 0 !important;
+}
+.pdf-export .resume-photo img {
+  display: block !important;
+  width: 30mm !important;
+  height: 30mm !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  margin-bottom: 4mm !important;
+}
+/* underline links in preview and PDF-export class */
+.resume-box a,
+.pdf-export a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+}
+.pdf-export .resume-name {
+  font-size: 1.7rem !important;
+  font-weight: bold !important;
+  margin-bottom: 2mm !important;
+}
+.pdf-export .resume-contact {
+  font-size: 1rem !important;
+  margin-bottom: 1mm !important;
+}
+.pdf-export .resume-section-title {
+  font-size: 1.1rem !important;
+  font-weight: bold !important;
+  color: #2563eb !important;
+  border-bottom: 1px solid #e0e7ff !important;
+  margin-top: 8mm !important;
+  margin-bottom: 3mm !important;
+  padding-bottom: 1mm !important;
+}
+.pdf-export .resume-subsection {
+  margin-bottom: 3mm !important;
+}
+.pdf-export .resume-italic {
+  font-style: italic !important;
+  color: #555 !important;
+  margin-bottom: 1mm !important;
+}
+.pdf-export .resume-period {
+  font-size: 0.95rem !important;
+  color: #888 !important;
+  margin-bottom: 1mm !important;
+}
+.pdf-export .resume-note {
+  font-size: 0.95rem !important;
+  color: #444 !important;
+}
+.pdf-export ul,
+.pdf-export ol {
+  margin: 0 0 3mm 6mm !important;
+  padding: 0 !important;
+}
+.pdf-export li {
+  margin-bottom: 1mm !important;
+  font-size: 1rem !important;
+}
+.pdf-export section {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  margin-bottom: 6mm !important;
+}
 /* ===== CSS Variables ===== */
 :root {
   /* Colors */
@@ -515,37 +602,70 @@ textarea.input {
 }
 
 .resume-box {
-  background: var(--white);
-  padding: var(--space-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--border);
-  max-width: 800px;
+  /* Mirror the PDF styling so preview matches generated PDF */
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: none;
+  border-radius: 0;
+  width: 180mm; /* A4 content width used for PDF */
+  max-width: 180mm;
+  box-sizing: border-box;
+  padding: 16mm 15mm;
   margin: 0 auto;
 }
 
 /* Resume Header */
 .resume-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xl);
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-lg);
-  border-bottom: 1px solid var(--border);
+  display: block; /* stack like PDF */
+  text-align: left;
+  margin-bottom: 10mm;
+  padding-bottom: 4mm;
+  border-bottom: 1px solid #ccc;
 }
 
 .resume-photo {
-  width: 120px;
-  height: 120px;
-  border-radius: var(--radius-full);
+  float: right; /* float to top-right like PDF */
+  width: 30mm;
+  height: 30mm;
+  border-radius: 50%;
   overflow: hidden;
-  border: 3px solid #e0e7ff;
+  border: 1.5mm solid #e0e7ff;
+  margin-left: 8mm;
 }
 
 .resume-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+/* Make preview text behave like the PDF: justified paragraphs and list items */
+.resume-box p,
+.resume-box li {
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* Paginated preview container shown on screen to mirror PDF pages */
+.pdf-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  padding: 16px 0;
+}
+
+.pdf-page {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.pdf-page-content {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
 }
 
 .resume-name {
@@ -672,24 +792,37 @@ textarea.input {
 
 /* Improve print quality */
 @media print {
+  @page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+  }
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
   body {
-    width: 100% !important;
+    width: auto !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
   }
-
   .resume-box {
-    width: 100% !important;
-    height: auto !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-width: 210mm !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
     padding: 0 !important;
-    margin: 0 !important;
     box-shadow: none !important;
+    background: white !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  section,
+  .resume-subsection {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
 

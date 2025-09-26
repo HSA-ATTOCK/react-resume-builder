@@ -120,17 +120,69 @@ const ResumePreview = ({ formData }) => {
     setIsGeneratingPDF(true);
 
     try {
-      // Load profile image if available
+      // Load profile image if available. Preserve MIME (PNG vs JPEG) so
+      // transparent PNGs are embedded as PNGs (keeps transparency) rather
+      // than being converted to JPEG which produces a black background.
       let imageBase64 = null;
+      let imageMime = null;
       if (formData.photo) {
         try {
           const response = await fetch(formData.photo);
           const blob = await response.blob();
+          imageMime = blob.type || null;
+
+          // If blob.type is empty (common when fetching a data URL), try to
+          // parse the MIME from the original data URL string.
+          if (
+            (!imageMime || imageMime === "") &&
+            typeof formData.photo === "string"
+          ) {
+            const m = formData.photo.match(/^data:([^;]+);/);
+            if (m && m[1]) imageMime = m[1];
+          }
+
+          // Read as DataURL
           imageBase64 = await new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
             reader.readAsDataURL(blob);
           });
+
+          // If MIME isn't PNG (or if the data url somehow ended up as JPEG),
+          // re-encode to PNG using a canvas to guarantee alpha is preserved
+          // and to avoid losing transparency when jsPDF embeds the image.
+          const needsReencode =
+            !imageMime || !imageMime.toLowerCase().includes("png");
+          if (needsReencode) {
+            try {
+              // Create an offscreen image and canvas to re-encode to PNG
+              const img = await new Promise((res, rej) => {
+                const i = new Image();
+                i.crossOrigin = "anonymous";
+                i.onload = () => res(i);
+                i.onerror = (e) => rej(e);
+                i.src = imageBase64;
+              });
+
+              const canvas = document.createElement("canvas");
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                const reencoded = canvas.toDataURL("image/png");
+                imageBase64 = reencoded;
+                imageMime = "image/png";
+              }
+            } catch (reErr) {
+              // If re-encoding fails, continue with the original data URL
+              console.warn(
+                "Image re-encode to PNG failed, using original:",
+                reErr
+              );
+            }
+          }
         } catch (error) {
           console.error("Failed to load profile image:", error);
         }
@@ -250,8 +302,31 @@ const ResumePreview = ({ formData }) => {
         const imgH = 30;
         // move image slightly left by 6mm and up by 9mm
         const imgX = pageWidth - margin - imgW - 8;
-        const imgY = margin - 9; // move image 9mm up
-        pdf.addImage(imageBase64, "JPEG", imgX, imgY, imgW, imgH);
+        const imgY = margin - 6; // move image 9mm up
+        // Choose PNG when the source image is a PNG (or SVG). PNG supports
+        // transparency which prevents black backgrounds on images without a
+        // background. Fall back to JPEG otherwise.
+        const lowerMime = (imageMime || "").toLowerCase();
+        const imgFormat =
+          lowerMime.includes("png") || lowerMime.includes("svg")
+            ? "PNG"
+            : "JPEG";
+        try {
+          pdf.addImage(imageBase64, imgFormat, imgX, imgY, imgW, imgH);
+        } catch (err) {
+          // If addImage fails for some mime (older jspdf), fall back to JPEG
+          console.warn(
+            "addImage failed with format",
+            imgFormat,
+            "- falling back to JPEG",
+            err
+          );
+          try {
+            pdf.addImage(imageBase64, "JPEG", imgX, imgY, imgW, imgH);
+          } catch (inner) {
+            console.error("Failed to add image to PDF:", inner);
+          }
+        }
       }
 
       // Contact Information
@@ -589,6 +664,16 @@ const ResumePreview = ({ formData }) => {
 
   return (
     <div className="preview-container">
+      {/* Top fixed download button */}
+      <div className="top-download-wrapper" aria-hidden={isGeneratingPDF}>
+        <button
+          className="download-btn top-download"
+          onClick={downloadPDF}
+          disabled={isGeneratingPDF}
+        >
+          {isGeneratingPDF ? "Generating PDF..." : "Download Resume"}
+        </button>
+      </div>
       {/* Download Button */}
       <button
         id="downloadResume"

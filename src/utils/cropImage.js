@@ -18,7 +18,8 @@ export function createImage(url) {
     img.crossOrigin = "anonymous"; // Allow CORS
 
     img.onload = () => resolve(img);
-    img.onerror = (err) => reject(new Error(`Failed to load image: ${err.message}`));
+    img.onerror = (err) =>
+      reject(new Error(`Failed to load image: ${err.message}`));
 
     img.src = url;
   });
@@ -32,14 +33,14 @@ export function createImage(url) {
  * @param {number} crop.y - Y coordinate of crop start
  * @param {number} crop.width - Width of crop area
  * @param {number} crop.height - Height of crop area
- * @param {string} [fileType='image/jpeg'] - Output image type
+ * @param {string} [fileType='image/png'] - Output image type
  * @param {number} [quality=0.9] - Quality (0 to 1)
  * @returns {Promise<string>} Base64 Data URL of the cropped image
  */
 export async function getCroppedImg(
   imageSrc,
   crop,
-  fileType = "image/jpeg",
+  fileType = "image/png",
   quality = 0.9
 ) {
   try {
@@ -49,12 +50,16 @@ export async function getCroppedImg(
 
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
+    // Preserve alpha channel by ensuring the 2D context supports transparency
     const ctx = canvas.getContext("2d");
 
     if (!ctx) throw new Error("Could not get canvas context");
 
     canvas.width = Math.floor(crop.width);
     canvas.height = Math.floor(crop.height);
+
+    // Clear canvas to ensure any alpha is preserved (avoid garbage pixels)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.drawImage(
       image,

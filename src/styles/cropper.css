@@ -44,7 +44,13 @@
   width: 100%;
   height: min(300px, 60vh);
   min-height: 200px;
-  background: var(--cropper-container-bg);
+  /* Use a light transparent-checkerboard to indicate alpha instead of a solid dark bg */
+  background-image: linear-gradient(45deg, #eee 25%, transparent 25%),
+    linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%),
+    linear-gradient(-45deg, transparent 75%, #eee 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -63,6 +69,7 @@
   background: #e5e7eb;
   cursor: pointer;
   transition: all 0.2s;
+  appearance: none;
   -webkit-appearance: none;
 }
 

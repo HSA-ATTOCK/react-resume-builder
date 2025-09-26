@@ -71,6 +71,10 @@
   font-size: 0.95rem !important;
   color: #444 !important;
 }
+/* Slightly reduce gap between skills and subsequent link in preview */
+.resume-note {
+  margin-bottom: 0.15rem; /* smaller gap to bring link closer */
+}
 .pdf-export ul,
 .pdf-export ol {
   margin: 0 0 3mm 6mm !important;
@@ -730,6 +734,11 @@ textarea.input {
 .resume-item-description {
   font-size: var(--text-sm);
   line-height: 1.6;
+}
+/* tighten spacing for project link paragraph to sit closer to preceding skills */
+.project-link {
+  margin-top: 0.1rem;
+  margin-bottom: 0.6rem;
 }
 
 /* ===== Responsive Design ===== */

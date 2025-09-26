@@ -460,8 +460,11 @@ const ResumePreview = ({ formData }) => {
             pdf.text("Skills: ", margin, currentY);
             pdf.setFont("helvetica", "normal");
             const skillsWidth = pdf.getTextWidth("Skills: ");
-            addText(project.skills, margin + skillsWidth, currentY - 3.5);
-            currentY += 3;
+            // tighten vertical spacing between the skills block and the following link
+            // move the skills block up slightly and reduce the manual post-gap
+            addText(project.skills, margin + skillsWidth, currentY - 2);
+            // add a smaller manual gap (addText already applies a small paragraph gap)
+            currentY += -0.7;
           }
 
           if (project.link) {

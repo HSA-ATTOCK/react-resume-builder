@@ -560,7 +560,7 @@ const ResumePreview = ({ formData }) => {
       }
 
       // Save the PDF
-      pdf.save(`${formData.fullName || "resume"}_${new Date().getTime()}.pdf`);
+      pdf.save(`${formData.fullName}_Resume.pdf`);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Failed to generate PDF. Please try again.");

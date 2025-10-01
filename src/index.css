@@ -1,34 +1,57 @@
 /* Dedicated class to apply during PDF export to ensure predictable layout */
 .pdf-export {
-  font-family: Arial, Helvetica, sans-serif !important;
-  color: #222 !important;
-  background: #fff !important;
-  width: 180mm !important;
-  max-width: 180mm !important;
-  box-sizing: border-box !important;
-  padding: 16mm 15mm !important;
-  margin: 0 auto !important;
-  border: 1px solid #ccc !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
+  font-family: "Helvetica", Arial, sans-serif !important;
+  font-size: 10pt !important;
+  line-height: 1.45 !important;
+  color: #111827 !important;
+  background: transparent !important;
+  letter-spacing: 0 !important;
+}
+.pdf-export p,
+.pdf-export li {
+  font-size: 10pt !important;
+  line-height: 1.45 !important;
+  margin: 0 0 4pt !important;
+  text-align: justify !important;
+  text-justify: inter-word !important;
+}
+.pdf-export strong {
+  font-weight: 700 !important;
+}
+.pdf-export em,
+.pdf-export .resume-italic {
+  font-style: italic !important;
+  color: #4b5563 !important;
+  font-size: 10pt !important;
+  margin: 0 0 3pt !important;
 }
 .pdf-export .resume-header {
   display: block !important;
   text-align: left !important;
-  border-bottom: 1px solid #ccc !important;
+  border-bottom: 0.4pt solid #d1d5db !important;
   margin-bottom: 10mm !important;
   padding-bottom: 4mm !important;
+  position: relative !important;
+  min-height: 30mm !important;
 }
 .pdf-export .resume-header-text {
   margin-left: 0 !important;
+  max-width: 125mm !important;
+}
+.pdf-export .resume-photo {
+  float: right !important;
+  width: 30mm !important;
+  height: 30mm !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  margin-left: 8mm !important;
 }
 .pdf-export .resume-photo img {
   display: block !important;
-  width: 30mm !important;
-  height: 30mm !important;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover !important;
   border-radius: 50% !important;
-  margin-bottom: 4mm !important;
 }
 /* underline links in preview and PDF-export class */
 .resume-box a,
@@ -37,39 +60,55 @@
   text-decoration: underline !important;
 }
 .pdf-export .resume-name {
-  font-size: 1.7rem !important;
-  font-weight: bold !important;
-  margin-bottom: 2mm !important;
+  font-size: 20pt !important;
+  font-weight: 700 !important;
+  margin: 0 0 3pt !important;
+  color: #111827 !important;
+  line-height: 1.1 !important;
+}
+.pdf-export .resume-title {
+  font-size: 12pt !important;
+  font-weight: 600 !important;
+  margin: 0 0 4pt !important;
+  color: #111827 !important;
 }
 .pdf-export .resume-contact {
-  font-size: 1rem !important;
-  margin-bottom: 1mm !important;
+  font-size: 10pt !important;
+  margin: 0 0 3pt !important;
+  color: #111827 !important;
 }
 .pdf-export .resume-section-title {
-  font-size: 1.1rem !important;
-  font-weight: bold !important;
+  font-size: 12pt !important;
+  font-weight: 700 !important;
   color: #2563eb !important;
-  border-bottom: 1px solid #e0e7ff !important;
+  border-bottom: 0.4pt solid #dbeafe !important;
   margin-top: 8mm !important;
   margin-bottom: 3mm !important;
   padding-bottom: 1mm !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.02em !important;
+}
+.pdf-export .resume-subtitle,
+.pdf-export h3.resume-subtitle {
+  font-size: 11pt !important;
+  font-weight: 700 !important;
+  margin: 0 0 3pt !important;
+  color: #111827 !important;
 }
 .pdf-export .resume-subsection {
   margin-bottom: 3mm !important;
 }
-.pdf-export .resume-italic {
-  font-style: italic !important;
-  color: #555 !important;
-  margin-bottom: 1mm !important;
-}
 .pdf-export .resume-period {
-  font-size: 0.95rem !important;
-  color: #888 !important;
-  margin-bottom: 1mm !important;
+  font-size: 9pt !important;
+  color: #6b7280 !important;
+  margin-bottom: 3pt !important;
 }
 .pdf-export .resume-note {
-  font-size: 0.95rem !important;
-  color: #444 !important;
+  font-size: 10pt !important;
+  color: #1f2937 !important;
+}
+.pdf-export .project-link {
+  margin: 2pt 0 6pt !important;
 }
 /* Slightly reduce gap between skills and subsequent link in preview */
 .resume-note {
@@ -79,10 +118,10 @@
 .pdf-export ol {
   margin: 0 0 3mm 6mm !important;
   padding: 0 !important;
+  list-style-position: outside !important;
 }
 .pdf-export li {
-  margin-bottom: 1mm !important;
-  font-size: 1rem !important;
+  margin-bottom: 3pt !important;
 }
 .pdf-export section {
   page-break-inside: avoid !important;
@@ -261,6 +300,15 @@ h4 {
   border-bottom: 1px solid var(--border-light);
 }
 
+/* Centered actions wrapper used when a section is expanded so Add button sits centered */
+.section-actions-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
 /* ===== Grid Layout ===== */
 .grid-2 {
   display: grid;
@@ -398,6 +446,34 @@ textarea.input {
   box-shadow: var(--shadow-sm);
   z-index: 10;
   transition: var(--transition);
+}
+
+/* Actions wrapper for cards (drag handle + remove) */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.drag-handle {
+  cursor: grab;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #fafafa, #f2f2f2);
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  font-weight: 600;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.card.drag-over {
+  outline: 2px dashed var(--primary);
+  background: #fbfdff;
 }
 
 .remove-btn:hover {
@@ -569,9 +645,8 @@ textarea.input {
 }
 
 .download-btn {
-  width: 15%;
-  padding: 12px 16px;
-  margin: var(--space-lg) auto 0;
+  padding: 10px 18px;
+  margin: 0;
   background-color: var(--primary);
   color: white;
   border: none;
@@ -585,21 +660,28 @@ textarea.input {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: fit-content;
+  min-width: auto;
+  width: auto;
 }
 
 /* Top fixed download button styles */
 .top-download-wrapper {
   position: fixed;
-  top: 5px;
-  left: 47%;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1200;
+  display: flex;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
 }
 .download-btn.top-download {
-  width: auto;
-  padding: 8px 12px;
+  padding: 10px 18px;
   font-size: 0.95rem;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: none;
 }
 
 .download-btn:hover {
@@ -658,7 +740,6 @@ textarea.input {
   height: 30mm;
   border-radius: 50%;
   overflow: hidden;
-  border: 1.5mm solid #e0e7ff;
   margin-left: 8mm;
 }
 
@@ -674,35 +755,6 @@ textarea.input {
 .resume-box li {
   text-align: justify;
   text-justify: inter-word;
-}
-
-/* Paginated preview container shown on screen to mirror PDF pages */
-.pdf-preview-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: var(--bg);
-  padding: 16px 0;
-}
-
-/* Hide the paginated preview on the home page by default. To show it,
-   add the `show-preview` class to a wrapping element (e.g., body or a
-   container) which will override this rule. */
-.pdf-preview-container {
-  display: none;
-}
-.show-preview .pdf-preview-container {
-  display: flex;
-}
-
-.pdf-page {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: #fff;
-}
-
-.pdf-page-content {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #222;
 }
 
 .resume-name {
@@ -802,10 +854,19 @@ textarea.input {
     grid-column: span 1;
   }
 
-  .download-btn {
-    width: 30%;
-    padding: 10px 14px;
-    font-size: var(--text-xs);
+  .top-download-wrapper {
+    top: 12px;
+    width: calc(100% - 32px);
+    max-width: 320px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .download-btn,
+  .preview-btn {
+    width: 100%;
+    font-size: 0.95rem;
   }
 }
 
@@ -888,4 +949,138 @@ textarea.input {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* ===== Preview Button ===== */
+.preview-btn {
+  padding: 10px 18px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-slow);
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-width: auto;
+}
+
+.preview-btn:hover {
+  background-color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.preview-btn:active {
+  background-color: #047857;
+}
+
+.preview-btn:disabled {
+  background-color: #6ee7b7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ===== Preview Modal ===== */
+.preview-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow: auto;
+}
+
+.preview-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 100%;
+  height: 90vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.preview-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.preview-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.preview-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.preview-modal-close:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.preview-modal-body {
+  flex: 1;
+  padding: 0;
+  background: #f9fafb;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+.preview-status {
+  padding: 32px;
+  text-align: center;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.preview-status.preview-error {
+  color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .preview-modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .preview-status {
+    padding: 24px;
+    font-size: 0.95rem;
+  }
 }

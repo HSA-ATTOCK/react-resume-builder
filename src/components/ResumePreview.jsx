@@ -1,653 +1,523 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import jsPDF from "jspdf";
-import { useEffect } from "react";
 
 const ResumePreview = ({ formData }) => {
-  const resumeRef = useRef();
-  const paginatedRef = useRef();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
-  // Rebuild paginated preview whenever formData changes
+  const previewUrlRef = useRef(null);
+  const previewTaskIdRef = useRef(0);
+
+  // Handle ESC key to close preview modal
   useEffect(() => {
-    buildPaginatedPreview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData]);
-
-  // Convert mm to px (approx at 96 DPI)
-  const mmToPx = (mm) => Math.round((mm * 96) / 25.4);
-
-  // Build paginated preview in paginatedRef to mirror PDF pages
-  const buildPaginatedPreview = () => {
-    const container = paginatedRef.current;
-    const source = resumeRef.current;
-    if (!container || !source) return;
-
-    // Clear existing
-    container.innerHTML = "";
-
-    const pageWidthMm = 210;
-    const pageHeightMm = 297;
-    const marginMm = 20;
-    const pageWidthPx = mmToPx(pageWidthMm);
-    const pageHeightPx = mmToPx(pageHeightMm);
-    const marginPx = mmToPx(marginMm);
-    const contentHeight = pageHeightPx - marginPx * 2;
-
-    // Helper to create a styled page element
-    const createPage = () => {
-      const p = document.createElement("div");
-      p.className = "pdf-page";
-      p.style.width = `${pageWidthPx}px`;
-      p.style.height = `${pageHeightPx}px`;
-      p.style.boxSizing = "border-box";
-      p.style.padding = `${marginPx}px`;
-      p.style.margin = "12px auto";
-      p.style.background = "#fff";
-      p.style.border = "1px solid #ddd";
-      p.style.overflow = "hidden";
-      p.style.position = "relative";
-      const inner = document.createElement("div");
-      inner.className = "pdf-page-content";
-      inner.style.width = "100%";
-      inner.style.minHeight = "1px";
-      p.appendChild(inner);
-      container.appendChild(p);
-      return inner;
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && showPreview) {
+        setShowPreview(false);
+      }
     };
 
-    // Start first page
-    let currentPageContent = createPage();
+    if (showPreview) {
+      document.addEventListener("keydown", handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = "hidden";
+    }
 
-    // Iterate through source child nodes (sections and header)
-    const children = Array.from(source.childNodes).filter((n) => {
-      // ignore empty text nodes
-      return !(n.nodeType === Node.TEXT_NODE && !n.textContent.trim());
-    });
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPreview]);
 
-    children.forEach((node) => {
-      const clone = node.cloneNode(true);
-      currentPageContent.appendChild(clone);
+  const buildPdfDocument = useCallback(async () => {
+    let imageBase64 = null;
+    let imageMime = null;
+    if (formData.photo) {
+      try {
+        const response = await fetch(formData.photo);
+        const blob = await response.blob();
+        imageMime = blob.type || null;
 
-      // If overflow, try to split paragraph nodes, otherwise move whole node to next page
-      const isOverflow = currentPageContent.scrollHeight > contentHeight;
-      if (isOverflow) {
-        // remove the clone
-        currentPageContent.removeChild(clone);
+        if (
+          (!imageMime || imageMime === "") &&
+          typeof formData.photo === "string"
+        ) {
+          const m = formData.photo.match(/^data:([^;]+);/);
+          if (m && m[1]) imageMime = m[1];
+        }
 
-        // If it's a section with paragraphs, try to split
-        if (clone.querySelectorAll) {
-          const paragraphs = Array.from(clone.querySelectorAll("p"));
-          if (paragraphs.length > 0) {
-            // create a wrapper for remaining content
-            const remaining = clone.cloneNode(false);
-            remaining.innerHTML = "";
+        imageBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
 
-            // append paragraph by paragraph
-            paragraphs.forEach((p) => {
-              const pClone = p.cloneNode(true);
-              currentPageContent.appendChild(pClone);
-              if (currentPageContent.scrollHeight > contentHeight) {
-                // remove last appended paragraph
-                currentPageContent.removeChild(pClone);
-                remaining.appendChild(p.cloneNode(true));
-              }
+        const needsReencode =
+          !imageMime || !imageMime.toLowerCase().includes("png");
+        if (needsReencode) {
+          try {
+            const img = await new Promise((res, rej) => {
+              const i = new Image();
+              i.crossOrigin = "anonymous";
+              i.onload = () => res(i);
+              i.onerror = (e) => rej(e);
+              i.src = imageBase64;
             });
 
-            // If remaining has children, create new page and append remaining
-            if (remaining.childNodes.length > 0) {
-              const nextPage = createPage();
-              nextPage.appendChild(remaining);
-              currentPageContent = nextPage;
-            } else {
-              // if nothing remaining, just create a new page for next nodes
-              currentPageContent = createPage();
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0);
+              const reencoded = canvas.toDataURL("image/png");
+              imageBase64 = reencoded;
+              imageMime = "image/png";
             }
-            return;
+          } catch (reErr) {
+            console.warn(
+              "Image re-encode to PNG failed, using original:",
+              reErr
+            );
           }
         }
-
-        // fallback: move whole node to next page
-        const nextPage = createPage();
-        nextPage.appendChild(clone);
-        currentPageContent = nextPage;
+      } catch (error) {
+        console.error("Failed to load profile image:", error);
       }
+    }
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
     });
-  };
 
-  const downloadPDF = async () => {
-    if (!resumeRef.current) return;
-    setIsGeneratingPDF(true);
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const contentWidth = pageWidth - margin * 2;
+    let currentY = margin;
 
-    try {
-      // Load profile image if available. Preserve MIME (PNG vs JPEG) so
-      // transparent PNGs are embedded as PNGs (keeps transparency) rather
-      // than being converted to JPEG which produces a black background.
-      let imageBase64 = null;
-      let imageMime = null;
-      if (formData.photo) {
-        try {
-          const response = await fetch(formData.photo);
-          const blob = await response.blob();
-          imageMime = blob.type || null;
-
-          // If blob.type is empty (common when fetching a data URL), try to
-          // parse the MIME from the original data URL string.
-          if (
-            (!imageMime || imageMime === "") &&
-            typeof formData.photo === "string"
-          ) {
-            const m = formData.photo.match(/^data:([^;]+);/);
-            if (m && m[1]) imageMime = m[1];
-          }
-
-          // Read as DataURL
-          imageBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-
-          // If MIME isn't PNG (or if the data url somehow ended up as JPEG),
-          // re-encode to PNG using a canvas to guarantee alpha is preserved
-          // and to avoid losing transparency when jsPDF embeds the image.
-          const needsReencode =
-            !imageMime || !imageMime.toLowerCase().includes("png");
-          if (needsReencode) {
-            try {
-              // Create an offscreen image and canvas to re-encode to PNG
-              const img = await new Promise((res, rej) => {
-                const i = new Image();
-                i.crossOrigin = "anonymous";
-                i.onload = () => res(i);
-                i.onerror = (e) => rej(e);
-                i.src = imageBase64;
-              });
-
-              const canvas = document.createElement("canvas");
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext("2d");
-              if (ctx) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                const reencoded = canvas.toDataURL("image/png");
-                imageBase64 = reencoded;
-                imageMime = "image/png";
-              }
-            } catch (reErr) {
-              // If re-encoding fails, continue with the original data URL
-              console.warn(
-                "Image re-encode to PNG failed, using original:",
-                reErr
-              );
-            }
-          }
-        } catch (error) {
-          console.error("Failed to load profile image:", error);
-        }
+    const checkPageBreak = (requiredHeight) => {
+      if (currentY + requiredHeight > pageHeight - margin) {
+        pdf.addPage();
+        currentY = margin;
+        return true;
       }
+      return false;
+    };
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
+    const addText = (text, x, y, options = {}) => {
+      const fontSize = options.fontSize || 10;
+      const maxWidth = options.maxWidth || contentWidth - x + margin;
+      const lineHeight = options.lineHeight || fontSize * 0.4;
 
-      // A4 dimensions
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 20;
-      const contentWidth = pageWidth - margin * 2;
-      let currentY = margin;
-      let currentPage = 1;
+      pdf.setFontSize(fontSize);
+      if (options.bold) pdf.setFont("helvetica", "bold");
+      else pdf.setFont("helvetica", "normal");
 
-      // Helper function to add new page if needed
-      const checkPageBreak = (requiredHeight) => {
-        if (currentY + requiredHeight > pageHeight - margin) {
-          pdf.addPage();
-          currentY = margin;
-          currentPage++;
-          return true;
-        }
-        return false;
-      };
+      const lines = pdf.splitTextToSize(text, maxWidth);
+      const totalHeight = lines.length * lineHeight;
+      checkPageBreak(totalHeight + 6);
 
-      // Helper function to add text with word wrapping and justification
-      // Increased default lineHeight to provide more breathing room between lines
-      const addText = (text, x, y, options = {}) => {
-        const fontSize = options.fontSize || 10;
-        const maxWidth = options.maxWidth || contentWidth - x + margin;
-        // Use 0.5 * fontSize as default line height for clearer spacing
-        const lineHeight = options.lineHeight || fontSize * 0.4;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const drawY = currentY;
 
-        pdf.setFontSize(fontSize);
-        if (options.bold) pdf.setFont("helvetica", "bold");
-        else pdf.setFont("helvetica", "normal");
-
-        const lines = pdf.splitTextToSize(text, maxWidth);
-
-        // Check if we need a page break
-        const totalHeight = lines.length * lineHeight;
-        // add small extra padding when checking for page break to avoid tight bottoms
-        checkPageBreak(totalHeight + 6);
-
-        // Render each line. For all but the last line, distribute extra space between words to justify.
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const drawY = currentY;
-
-          if (i < lines.length - 1) {
-            // Justify this line but preserve minimum single-space width
-            const words = (line || "").trim().match(/\S+/g) || [];
-            if (words.length > 1) {
-              const wordsWidth = words.reduce(
-                (sum, w) => sum + pdf.getTextWidth(w),
-                0
-              );
-              const gaps = words.length - 1;
-              const spaceWidth = pdf.getTextWidth(" ");
-              const rawExtra = (maxWidth - wordsWidth) / gaps; // total gap size
-
-              // If rawExtra is negative, line already exceeds maxWidth; fall back to left align
-              if (rawExtra <= 0) {
-                pdf.text(line, x, drawY);
-              } else {
-                // gapWidth is at least the measured single-space width
-                const gapWidth = Math.max(spaceWidth, rawExtra);
-                let cursorX = x;
-                words.forEach((word, wi) => {
-                  pdf.text(word, cursorX, drawY);
-                  const wordWidth = pdf.getTextWidth(word);
-                  cursorX += wordWidth + gapWidth;
-                });
-              }
-            } else {
-              // Single word or empty - left align
+        if (i < lines.length - 1) {
+          const words = (line || "").trim().match(/\S+/g) || [];
+          if (words.length > 1) {
+            const wordsWidth = words.reduce(
+              (sum, w) => sum + pdf.getTextWidth(w),
+              0
+            );
+            const gaps = words.length - 1;
+            const spaceWidth = pdf.getTextWidth(" ");
+            const rawExtra = (maxWidth - wordsWidth) / gaps;
+            if (rawExtra <= 0) {
               pdf.text(line, x, drawY);
+            } else {
+              const gapWidth = Math.max(spaceWidth, rawExtra);
+              let cursorX = x;
+              words.forEach((word) => {
+                pdf.text(word, cursorX, drawY);
+                const wordWidth = pdf.getTextWidth(word);
+                cursorX += wordWidth + gapWidth;
+              });
             }
           } else {
-            // Last line: left align (do not justify)
             pdf.text(line, x, drawY);
           }
-
-          currentY += lineHeight;
+        } else {
+          pdf.text(line, x, drawY);
         }
 
-        // Add a tiny paragraph gap after the block to separate from next content
-        currentY += Math.max(1, fontSize * 0.2);
-        return currentY;
-      };
-
-      // Header Section
-      if (formData.fullName) {
-        pdf.setFontSize(20);
-        pdf.setFont("helvetica", "bold");
-        pdf.text(formData.fullName, margin, currentY);
-        currentY += 8;
-        // Render title under the name if provided
-        if (formData.title) {
-          pdf.setFontSize(12);
-          pdf.setFont("helvetica", "bold");
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(formData.title, margin, currentY + 2);
-          currentY += 8;
-          pdf.setTextColor(0, 0, 0);
-        }
+        currentY += lineHeight;
       }
 
-      // Add profile image if available (shifted slightly up)
-      if (imageBase64) {
-        const imgW = 30;
-        const imgH = 30;
-        // move image slightly left by 6mm and up by 9mm
-        const imgX = pageWidth - margin - imgW - 8;
-        const imgY = margin - 6; // move image 9mm up
-        // Choose PNG when the source image is a PNG (or SVG). PNG supports
-        // transparency which prevents black backgrounds on images without a
-        // background. Fall back to JPEG otherwise.
-        const lowerMime = (imageMime || "").toLowerCase();
-        const imgFormat =
-          lowerMime.includes("png") || lowerMime.includes("svg")
-            ? "PNG"
-            : "JPEG";
-        try {
-          pdf.addImage(imageBase64, imgFormat, imgX, imgY, imgW, imgH);
-        } catch (err) {
-          // If addImage fails for some mime (older jspdf), fall back to JPEG
-          console.warn(
-            "addImage failed with format",
-            imgFormat,
-            "- falling back to JPEG",
-            err
-          );
-          try {
-            pdf.addImage(imageBase64, "JPEG", imgX, imgY, imgW, imgH);
-          } catch (inner) {
-            console.error("Failed to add image to PDF:", inner);
-          }
-        }
-      }
+      currentY += Math.max(1, fontSize * 0.2);
+      return currentY;
+    };
 
-      // Contact Information
-      const contactInfo = [];
-      if (formData.phone) contactInfo.push(`Phone: ${formData.phone}`);
-      if (formData.whatsapp) contactInfo.push(`WhatsApp: ${formData.whatsapp}`);
-      if (formData.email) contactInfo.push(`Email: ${formData.email}`);
-
-      if (contactInfo.length > 0) {
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
-        contactInfo.forEach((info) => {
-          pdf.text(info, margin, currentY);
-          currentY += 4;
-        });
-        currentY += 3;
-      }
-
-      // Add a line separator
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
+    if (formData.fullName) {
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(formData.fullName, margin, currentY);
       currentY += 8;
-
-      // Personal Details Section
-      const personalDetails = [];
-      if (formData.dob) personalDetails.push(`Date of Birth: ${formData.dob}`);
-      if (formData.nationality)
-        personalDetails.push(`Nationality: ${formData.nationality}`);
-      if (formData.religion)
-        personalDetails.push(`Religion: ${formData.religion}`);
-      if (formData.maritalStatus)
-        personalDetails.push(`Marital Status: ${formData.maritalStatus}`);
-      if (formData.license)
-        personalDetails.push(`Driving License: ${formData.license}`);
-
-      if (personalDetails.length > 0) {
-        checkPageBreak(20);
+      if (formData.title) {
         pdf.setFontSize(12);
         pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("PERSONAL DETAILS", margin, currentY);
-        currentY += 6;
-
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
         pdf.setTextColor(0, 0, 0);
-        personalDetails.forEach((detail) => {
-          checkPageBreak(5);
-          pdf.text(detail, margin, currentY);
-          currentY += 4;
-        });
-        currentY += 5;
+        pdf.text(formData.title, margin, currentY + 2);
+        currentY += 8;
+        pdf.setTextColor(0, 0, 0);
       }
+    }
 
-      // Social Links Section
-      if (formData.customLinks?.length > 0) {
-        checkPageBreak(15);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
+    if (imageBase64) {
+      const imgW = 30;
+      const imgH = 30;
+      const imgX = pageWidth - margin - imgW - 8;
+      const imgY = margin - 6;
+      const lowerMime = (imageMime || "").toLowerCase();
+      const imgFormat =
+        lowerMime.includes("png") || lowerMime.includes("svg") ? "PNG" : "JPEG";
+      try {
+        pdf.addImage(imageBase64, imgFormat, imgX, imgY, imgW, imgH);
+      } catch (err) {
+        console.warn(
+          "addImage failed with format",
+          imgFormat,
+          "- falling back to JPEG",
+          err
+        );
+        try {
+          pdf.addImage(imageBase64, "JPEG", imgX, imgY, imgW, imgH);
+        } catch (inner) {
+          console.error("Failed to add image to PDF:", inner);
+        }
+      }
+    }
+
+    const contactInfo = [];
+    if (formData.phone) contactInfo.push(`Phone: ${formData.phone}`);
+    if (formData.whatsapp) contactInfo.push(`WhatsApp: ${formData.whatsapp}`);
+    if (formData.email) contactInfo.push(`Email: ${formData.email}`);
+
+    if (contactInfo.length > 0) {
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      contactInfo.forEach((info) => {
+        pdf.text(info, margin, currentY);
+        currentY += 4;
+      });
+      currentY += 3;
+    }
+
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 8;
+
+    const personalDetails = [];
+    if (formData.dob) personalDetails.push(`Date of Birth: ${formData.dob}`);
+    if (formData.nationality)
+      personalDetails.push(`Nationality: ${formData.nationality}`);
+    if (formData.religion)
+      personalDetails.push(`Religion: ${formData.religion}`);
+    if (formData.license)
+      personalDetails.push(`Driving License: ${formData.license}`);
+
+    if (personalDetails.length > 0) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("PERSONAL DETAILS", margin, currentY);
+      currentY += 6;
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      personalDetails.forEach((detail) => {
+        checkPageBreak(5);
+        pdf.text(detail, margin, currentY);
+        currentY += 4;
+      });
+      currentY += 5;
+    }
+
+    if (formData.customLinks?.length > 0) {
+      checkPageBreak(15);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("SOCIAL LINKS", margin, currentY);
+      currentY += 6;
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      formData.customLinks.forEach((link) => {
+        checkPageBreak(5);
+        const label = `${link.title || "Link"}: `;
+        pdf.text(label, margin, currentY);
         pdf.setTextColor(37, 99, 235);
-        pdf.text("SOCIAL LINKS", margin, currentY);
-        currentY += 6;
-
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
+        const labelWidth = pdf.getTextWidth(label);
+        pdf.text(link.url, margin + labelWidth, currentY);
+        const urlWidth = pdf.getTextWidth(link.url);
+        pdf.setDrawColor(37, 99, 235);
+        pdf.setLineWidth(0.4);
+        const underlineY = currentY + 0.8;
+        pdf.line(
+          margin + labelWidth,
+          underlineY,
+          margin + labelWidth + urlWidth,
+          underlineY
+        );
         pdf.setTextColor(0, 0, 0);
-        formData.customLinks.forEach((link) => {
-          checkPageBreak(5);
-          const label = `${link.title || "Link"}: `;
-          pdf.text(label, margin, currentY);
+        pdf.setDrawColor(0, 0, 0);
+        currentY += 4;
+      });
+      currentY += 5;
+    }
+
+    if (formData.profile) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("PROFILE", margin, currentY);
+      currentY += 6;
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      addText(formData.profile, margin, currentY);
+      currentY += 5;
+    }
+
+    if (formData.objective) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("OBJECTIVE", margin, currentY);
+      currentY += 6;
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      addText(formData.objective, margin, currentY);
+      currentY += 5;
+    }
+
+    if (formData.education?.length > 0) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("EDUCATION", margin, currentY);
+      currentY += 6;
+
+      formData.education.forEach((edu) => {
+        checkPageBreak(15);
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(0, 0, 0);
+        if (edu.degree) {
+          pdf.setFontSize(11);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(edu.degree, margin, currentY);
+          currentY += 5;
+        }
+
+        if (edu.institute) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "italic");
+          pdf.text(edu.institute, margin, currentY);
+          currentY += 4;
+        }
+
+        if (edu.period) {
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(edu.period, margin, currentY);
+          currentY += 4;
+        }
+        currentY += 3;
+      });
+      currentY += 2;
+    }
+
+    if (formData.projects?.length > 0) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("PROJECTS", margin, currentY);
+      currentY += 6;
+
+      formData.projects.forEach((project) => {
+        checkPageBreak(20);
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(project.title || "", margin, currentY);
+        currentY += 5;
+
+        if (project.role) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Role: ", margin, currentY);
+          pdf.setFont("helvetica", "italic");
+          const roleWidth = pdf.getTextWidth("Role: ");
+          pdf.text(project.role, margin + roleWidth, currentY);
+          currentY += 4;
+        }
+
+        if (project.period) {
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(project.period, margin, currentY);
+          currentY += 4;
+        }
+
+        if (project.description) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(0, 0, 0);
+          addText(project.description, margin, currentY);
+          currentY += 3;
+        }
+
+        if (project.skills) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Skills: ", margin, currentY);
+          pdf.setFont("helvetica", "normal");
+          const skillsWidth = pdf.getTextWidth("Skills: ");
+          addText(project.skills, margin + skillsWidth, currentY - 2);
+          currentY += -0.7;
+        }
+
+        if (project.link) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Link: ", margin, currentY);
+          pdf.setFont("helvetica", "normal");
           pdf.setTextColor(37, 99, 235);
-          const labelWidth = pdf.getTextWidth(label);
-          pdf.text(link.url, margin + labelWidth, currentY);
-          // underline the URL
-          const urlWidth = pdf.getTextWidth(link.url);
+          const linkWidth = pdf.getTextWidth("Link: ");
+          pdf.text(project.link, margin + linkWidth, currentY);
+          const urlWidth = pdf.getTextWidth(project.link);
+          const underlineY = currentY + 0.8;
           pdf.setDrawColor(37, 99, 235);
           pdf.setLineWidth(0.4);
-          const underlineY = currentY + 0.8; // small offset under baseline
           pdf.line(
-            margin + labelWidth,
+            margin + linkWidth,
             underlineY,
-            margin + labelWidth + urlWidth,
+            margin + linkWidth + urlWidth,
             underlineY
           );
           pdf.setTextColor(0, 0, 0);
           pdf.setDrawColor(0, 0, 0);
           currentY += 4;
-        });
-        currentY += 5;
-      }
+        }
+        currentY += 3;
+      });
+      currentY += 2;
+    }
 
-      // Profile Section
-      if (formData.profile) {
+    if (formData.experience?.length > 0) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("WORK EXPERIENCE", margin, currentY);
+      currentY += 6;
+
+      formData.experience.forEach((job) => {
         checkPageBreak(20);
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("PROFILE", margin, currentY);
-        currentY += 6;
-
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
         pdf.setTextColor(0, 0, 0);
-        addText(formData.profile, margin, currentY);
+        pdf.text(job.title || "", margin, currentY);
         currentY += 5;
-      }
 
-      // Objective Section
-      if (formData.objective) {
-        checkPageBreak(20);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("OBJECTIVE", margin, currentY);
-        currentY += 6;
+        if (job.company || job.period) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "italic");
+          const companyText = job.company ? job.company : "";
+          const periodText = job.period ? ` — ${job.period}` : "";
+          pdf.text(companyText + periodText, margin, currentY);
+          currentY += 4;
+        }
 
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(0, 0, 0);
-        addText(formData.objective, margin, currentY);
-        currentY += 5;
-      }
+        if (job.details?.length > 0) {
+          job.details.forEach((detail) => {
+            if (detail && detail.trim()) {
+              checkPageBreak(6);
+              pdf.setFontSize(10);
+              pdf.setFont("helvetica", "normal");
+              pdf.text("• ", margin, currentY);
+              addText(detail, margin + 5, currentY - 3.5, {
+                maxWidth: contentWidth - 5,
+              });
+              currentY += 2;
+            }
+          });
+        }
+        currentY += 3;
+      });
+      currentY += 2;
+    }
 
-      // Education Section
-      if (formData.education?.length > 0) {
-        checkPageBreak(20);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("EDUCATION", margin, currentY);
-        currentY += 6;
+    if (formData.skills) {
+      checkPageBreak(15);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("SKILLS", margin, currentY);
+      currentY += 6;
 
-        formData.education.forEach((edu) => {
-          checkPageBreak(15);
-          pdf.setFontSize(11);
-          pdf.setFont("helvetica", "bold");
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(edu.institute || "", margin, currentY);
-          currentY += 5;
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      addText(formData.skills, margin, currentY);
+      currentY += 5;
+    }
 
-          if (edu.degree) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "italic");
-            pdf.text(edu.degree, margin, currentY);
-            currentY += 4;
-          }
+    if (formData.languages) {
+      checkPageBreak(15);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("LANGUAGES", margin, currentY);
+      currentY += 6;
 
-          if (edu.period) {
-            pdf.setFontSize(9);
-            pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(100, 100, 100);
-            pdf.text(edu.period, margin, currentY);
-            currentY += 4;
-          }
-          currentY += 3;
-        });
-        currentY += 2;
-      }
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+      addText(formData.languages, margin, currentY);
+    }
 
-      // Projects Section
-      if (formData.projects?.length > 0) {
-        checkPageBreak(20);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("PROJECTS", margin, currentY);
-        currentY += 6;
+    return pdf;
+  }, [formData]);
 
-        formData.projects.forEach((project) => {
-          checkPageBreak(20);
-          pdf.setFontSize(11);
-          pdf.setFont("helvetica", "bold");
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(project.title || "", margin, currentY);
-          currentY += 5;
-
-          if (project.role) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("Role: ", margin, currentY);
-            pdf.setFont("helvetica", "italic");
-            const roleWidth = pdf.getTextWidth("Role: ");
-            pdf.text(project.role, margin + roleWidth, currentY);
-            currentY += 4;
-          }
-
-          if (project.period) {
-            pdf.setFontSize(9);
-            pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(100, 100, 100);
-            pdf.text(project.period, margin, currentY);
-            currentY += 4;
-          }
-
-          if (project.description) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(0, 0, 0);
-            addText(project.description, margin, currentY);
-            currentY += 3;
-          }
-
-          if (project.skills) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("Skills: ", margin, currentY);
-            pdf.setFont("helvetica", "normal");
-            const skillsWidth = pdf.getTextWidth("Skills: ");
-            // tighten vertical spacing between the skills block and the following link
-            // move the skills block up slightly and reduce the manual post-gap
-            addText(project.skills, margin + skillsWidth, currentY - 2);
-            // add a smaller manual gap (addText already applies a small paragraph gap)
-            currentY += -0.7;
-          }
-
-          if (project.link) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("Link: ", margin, currentY);
-            pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(37, 99, 235);
-            const linkWidth = pdf.getTextWidth("Link: ");
-            pdf.text(project.link, margin + linkWidth, currentY);
-            // underline project link
-            const urlWidth = pdf.getTextWidth(project.link);
-            const underlineY = currentY + 0.8;
-            pdf.setDrawColor(37, 99, 235);
-            pdf.setLineWidth(0.4);
-            pdf.line(
-              margin + linkWidth,
-              underlineY,
-              margin + linkWidth + urlWidth,
-              underlineY
-            );
-            pdf.setTextColor(0, 0, 0);
-            pdf.setDrawColor(0, 0, 0);
-            currentY += 4;
-          }
-          currentY += 3;
-        });
-        currentY += 2;
-      }
-
-      // Work Experience Section
-      if (formData.experience?.length > 0) {
-        checkPageBreak(20);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("WORK EXPERIENCE", margin, currentY);
-        currentY += 6;
-
-        formData.experience.forEach((job) => {
-          checkPageBreak(20);
-          pdf.setFontSize(11);
-          pdf.setFont("helvetica", "bold");
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(job.title || "", margin, currentY);
-          currentY += 5;
-
-          if (job.company || job.period) {
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "italic");
-            const companyText = job.company ? job.company : "";
-            const periodText = job.period ? ` — ${job.period}` : "";
-            pdf.text(companyText + periodText, margin, currentY);
-            currentY += 4;
-          }
-
-          if (job.details?.length > 0) {
-            job.details.forEach((detail) => {
-              if (detail && detail.trim()) {
-                checkPageBreak(6);
-                pdf.setFontSize(10);
-                pdf.setFont("helvetica", "normal");
-                pdf.text("• ", margin, currentY);
-                addText(detail, margin + 5, currentY - 3.5, {
-                  maxWidth: contentWidth - 5,
-                });
-                currentY += 2;
-              }
-            });
-          }
-          currentY += 3;
-        });
-        currentY += 2;
-      }
-
-      // Skills Section
-      if (formData.skills) {
-        checkPageBreak(15);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("SKILLS", margin, currentY);
-        currentY += 6;
-
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(0, 0, 0);
-        addText(formData.skills, margin, currentY);
-        currentY += 5;
-      }
-
-      // Languages Section
-      if (formData.languages) {
-        checkPageBreak(15);
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("LANGUAGES", margin, currentY);
-        currentY += 6;
-
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(0, 0, 0);
-        addText(formData.languages, margin, currentY);
-      }
-
-      // Save the PDF
-      pdf.save(`${formData.fullName}_Resume.pdf`);
+  const downloadPDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const pdf = await buildPdfDocument();
+      const fileName = formData.fullName
+        ? `${formData.fullName}_Resume.pdf`
+        : "Resume.pdf";
+      pdf.save(fileName);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -655,6 +525,58 @@ const ResumePreview = ({ formData }) => {
       setIsGeneratingPDF(false);
     }
   };
+
+  const triggerPreview = useCallback(async () => {
+    const taskId = ++previewTaskIdRef.current;
+    setIsPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewUrl(null);
+
+    try {
+      const pdf = await buildPdfDocument();
+      if (taskId !== previewTaskIdRef.current) return;
+      const blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      previewUrlRef.current = url;
+      setPreviewUrl(url);
+    } catch (error) {
+      if (taskId !== previewTaskIdRef.current) return;
+      console.error("Preview generation failed:", error);
+      setPreviewError("Unable to render preview. Please try again.");
+    } finally {
+      if (taskId === previewTaskIdRef.current) {
+        setIsPreviewLoading(false);
+      }
+    }
+  }, [buildPdfDocument]);
+
+  useEffect(() => {
+    if (!showPreview) return;
+    triggerPreview();
+  }, [showPreview, triggerPreview]);
+
+  useEffect(() => {
+    if (showPreview) return;
+    previewTaskIdRef.current += 1;
+    setIsPreviewLoading(false);
+    setPreviewError(null);
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewUrl(null);
+  }, [showPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
 
   // Helper function to render list items safely
   const renderListItems = (items) => {
@@ -664,47 +586,41 @@ const ResumePreview = ({ formData }) => {
 
   return (
     <div className="preview-container">
-      {/* Top fixed download button */}
+      {/* Top fixed action buttons */}
       <div className="top-download-wrapper" aria-hidden={isGeneratingPDF}>
         <button
+          id="downloadResume"
           className="download-btn top-download"
           onClick={downloadPDF}
           disabled={isGeneratingPDF}
         >
           {isGeneratingPDF ? "Generating PDF..." : "Download Resume"}
         </button>
+        <button
+          className="preview-btn top-preview"
+          onClick={() => setShowPreview(true)}
+          disabled={isPreviewLoading}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          Preview Resume
+        </button>
       </div>
-      {/* Download Button */}
-      <button
-        id="downloadResume"
-        className="download-btn"
-        onClick={downloadPDF}
-        disabled={isGeneratingPDF}
-        aria-busy={isGeneratingPDF}
-      >
-        {isGeneratingPDF ? (
-          "Generating PDF..."
-        ) : (
-          <>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Download Resume
-          </>
-        )}
-      </button>
 
       {/* Hidden resume source used to build paginated preview and for PDF generation */}
-      <div id="resume-preview" ref={resumeRef} className="resume-box">
+      <div id="resume-preview" className="resume-box">
         {/* === Header with Photo === */}
         <div className="resume-header">
           {formData.photo && (
@@ -752,7 +668,7 @@ const ResumePreview = ({ formData }) => {
         {(formData.dob ||
           formData.nationality ||
           formData.religion ||
-          formData.maritalStatus ||
+          // formData.maritalStatus ||
           formData.license) && (
           <section>
             <h2 className="resume-section-title">Personal Details</h2>
@@ -771,35 +687,35 @@ const ResumePreview = ({ formData }) => {
                 <strong>Religion:</strong> {formData.religion}
               </p>
             )}
+            {/* Marital status omitted from preview per request
             {formData.maritalStatus && (
               <p>
                 <strong>Marital Status:</strong> {formData.maritalStatus}
               </p>
             )}
+            */}
             {formData.license && (
               <p>
                 <strong>Driving License:</strong> {formData.license}
               </p>
             )}
-            {formData.customLinks?.length > 0 && (
-              <section>
-                <h2 className="resume-section-title">Social Links</h2>
-                <ul>
-                  {formData.customLinks.map((link, idx) => (
-                    <li key={idx}>
-                      <strong>{link.title || "Link"}:</strong>{" "}
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {link.url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+          </section>
+        )}
+
+        {/* === Social Links === */}
+        {formData.customLinks?.length > 0 && (
+          <section>
+            <h2 className="resume-section-title">Social Links</h2>
+            <ul>
+              {formData.customLinks.map((link, idx) => (
+                <li key={idx}>
+                  <strong>{link.title || "Link"}:</strong>{" "}
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                    {link.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
@@ -825,8 +741,11 @@ const ResumePreview = ({ formData }) => {
             <h2 className="resume-section-title">Education</h2>
             {formData.education.map((edu, idx) => (
               <div key={idx} className="resume-subsection">
-                <p className="resume-subtitle">{edu.institute}</p>
-                <p className="resume-italic">{edu.degree}</p>
+                {/* Display degree first, then institute (swapped) */}
+                {edu.degree && <p className="resume-subtitle">{edu.degree}</p>}
+                {edu.institute && (
+                  <p className="resume-italic">{edu.institute}</p>
+                )}
                 {edu.period && <p className="resume-period">{edu.period}</p>}
               </div>
             ))}
@@ -905,12 +824,50 @@ const ResumePreview = ({ formData }) => {
         )}
       </div>
 
-      {/* Visible paginated preview that mirrors the PDF pages */}
-      <div
-        className="pdf-preview-container"
-        ref={paginatedRef}
-        aria-hidden={false}
-      ></div>
+      {/* Preview Modal */}
+      {showPreview && (
+        <div
+          className="preview-modal-overlay"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="preview-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="preview-modal-header">
+              <h2>Resume Preview</h2>
+              <button
+                className="preview-modal-close"
+                onClick={() => setShowPreview(false)}
+                aria-label="Close preview"
+              >
+                ✖
+              </button>
+            </div>
+            <div className="preview-modal-body">
+              {isPreviewLoading && (
+                <div className="preview-status">Generating preview…</div>
+              )}
+              {!isPreviewLoading && previewError && (
+                <div className="preview-status preview-error">
+                  {previewError}
+                </div>
+              )}
+              {!isPreviewLoading && !previewError && previewUrl && (
+                <iframe
+                  className="preview-pdf-frame"
+                  title="Resume Preview"
+                  src={previewUrl}
+                  frameBorder="0"
+                />
+              )}
+              {!isPreviewLoading && !previewError && !previewUrl && (
+                <div className="preview-status">No preview available.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -926,7 +883,7 @@ ResumePreview.propTypes = {
     dob: PropTypes.string,
     nationality: PropTypes.string,
     religion: PropTypes.string,
-    maritalStatus: PropTypes.string,
+    // maritalStatus: PropTypes.string,
     license: PropTypes.string,
     customLinks: PropTypes.arrayOf(
       PropTypes.shape({

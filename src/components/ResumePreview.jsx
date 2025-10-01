@@ -584,6 +584,10 @@ const ResumePreview = ({ formData }) => {
     return items.map((item, i) => (item ? <li key={i}>{item}</li> : null));
   };
 
+  const previewIframeSrc = previewUrl
+    ? `${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`
+    : null;
+
   return (
     <div className="preview-container">
       {/* Top fixed action buttons */}
@@ -853,11 +857,11 @@ const ResumePreview = ({ formData }) => {
                   {previewError}
                 </div>
               )}
-              {!isPreviewLoading && !previewError && previewUrl && (
+              {!isPreviewLoading && !previewError && previewIframeSrc && (
                 <iframe
                   className="preview-pdf-frame"
                   title="Resume Preview"
-                  src={previewUrl}
+                  src={previewIframeSrc}
                   frameBorder="0"
                 />
               )}

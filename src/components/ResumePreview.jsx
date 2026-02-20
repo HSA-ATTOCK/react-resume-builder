@@ -82,7 +82,7 @@ const ResumePreview = ({ formData }) => {
           } catch (reErr) {
             console.warn(
               "Image re-encode to PNG failed, using original:",
-              reErr
+              reErr,
             );
           }
         }
@@ -134,7 +134,7 @@ const ResumePreview = ({ formData }) => {
           if (words.length > 1) {
             const wordsWidth = words.reduce(
               (sum, w) => sum + pdf.getTextWidth(w),
-              0
+              0,
             );
             const gaps = words.length - 1;
             const spaceWidth = pdf.getTextWidth(" ");
@@ -194,7 +194,7 @@ const ResumePreview = ({ formData }) => {
           "addImage failed with format",
           imgFormat,
           "- falling back to JPEG",
-          err
+          err,
         );
         try {
           pdf.addImage(imageBase64, "JPEG", imgX, imgY, imgW, imgH);
@@ -277,7 +277,7 @@ const ResumePreview = ({ formData }) => {
           margin + labelWidth,
           underlineY,
           margin + labelWidth + urlWidth,
-          underlineY
+          underlineY,
         );
         pdf.setTextColor(0, 0, 0);
         pdf.setDrawColor(0, 0, 0);
@@ -355,6 +355,50 @@ const ResumePreview = ({ formData }) => {
       currentY += 2;
     }
 
+    if (formData.experience?.length > 0) {
+      checkPageBreak(20);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("WORK EXPERIENCE", margin, currentY);
+      currentY += 6;
+
+      formData.experience.forEach((job) => {
+        checkPageBreak(20);
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(job.title || "", margin, currentY);
+        currentY += 5;
+
+        if (job.company || job.period) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "italic");
+          const companyText = job.company ? job.company : "";
+          const periodText = job.period ? ` — ${job.period}` : "";
+          pdf.text(companyText + periodText, margin, currentY);
+          currentY += 4;
+        }
+
+        if (job.details?.length > 0) {
+          job.details.forEach((detail) => {
+            if (detail && detail.trim()) {
+              checkPageBreak(6);
+              pdf.setFontSize(10);
+              pdf.setFont("helvetica", "normal");
+              pdf.text("• ", margin, currentY);
+              addText(detail, margin + 5, currentY - 3.5, {
+                maxWidth: contentWidth - 5,
+              });
+              currentY += 2;
+            }
+          });
+        }
+        currentY += 3;
+      });
+      currentY += 2;
+    }
+
     if (formData.projects?.length > 0) {
       checkPageBreak(20);
       pdf.setFontSize(12);
@@ -423,55 +467,11 @@ const ResumePreview = ({ formData }) => {
             margin + linkWidth,
             underlineY,
             margin + linkWidth + urlWidth,
-            underlineY
+            underlineY,
           );
           pdf.setTextColor(0, 0, 0);
           pdf.setDrawColor(0, 0, 0);
           currentY += 4;
-        }
-        currentY += 3;
-      });
-      currentY += 2;
-    }
-
-    if (formData.experience?.length > 0) {
-      checkPageBreak(20);
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(37, 99, 235);
-      pdf.text("WORK EXPERIENCE", margin, currentY);
-      currentY += 6;
-
-      formData.experience.forEach((job) => {
-        checkPageBreak(20);
-        pdf.setFontSize(11);
-        pdf.setFont("helvetica", "bold");
-        pdf.setTextColor(0, 0, 0);
-        pdf.text(job.title || "", margin, currentY);
-        currentY += 5;
-
-        if (job.company || job.period) {
-          pdf.setFontSize(10);
-          pdf.setFont("helvetica", "italic");
-          const companyText = job.company ? job.company : "";
-          const periodText = job.period ? ` — ${job.period}` : "";
-          pdf.text(companyText + periodText, margin, currentY);
-          currentY += 4;
-        }
-
-        if (job.details?.length > 0) {
-          job.details.forEach((detail) => {
-            if (detail && detail.trim()) {
-              checkPageBreak(6);
-              pdf.setFontSize(10);
-              pdf.setFont("helvetica", "normal");
-              pdf.text("• ", margin, currentY);
-              addText(detail, margin + 5, currentY - 3.5, {
-                maxWidth: contentWidth - 5,
-              });
-              currentY += 2;
-            }
-          });
         }
         currentY += 3;
       });
@@ -637,7 +637,7 @@ const ResumePreview = ({ formData }) => {
                   e.target.style.display = "none";
                   console.error(
                     "Failed to load profile photo:",
-                    formData.photo
+                    formData.photo,
                   );
                 }}
                 onLoad={(e) => {
@@ -893,7 +893,7 @@ ResumePreview.propTypes = {
       PropTypes.shape({
         title: PropTypes.string,
         url: PropTypes.string,
-      })
+      }),
     ),
     profile: PropTypes.string,
     objective: PropTypes.string,
@@ -902,7 +902,15 @@ ResumePreview.propTypes = {
         institute: PropTypes.string,
         degree: PropTypes.string,
         period: PropTypes.string,
-      })
+      }),
+    ),
+    experience: PropTypes.arrayOf(
+      PropTypes.shape({
+        title: PropTypes.string,
+        company: PropTypes.string,
+        period: PropTypes.string,
+        details: PropTypes.arrayOf(PropTypes.string),
+      }),
     ),
     projects: PropTypes.arrayOf(
       PropTypes.shape({
@@ -912,15 +920,7 @@ ResumePreview.propTypes = {
         description: PropTypes.string,
         skills: PropTypes.string,
         link: PropTypes.string,
-      })
-    ),
-    experience: PropTypes.arrayOf(
-      PropTypes.shape({
-        title: PropTypes.string,
-        company: PropTypes.string,
-        period: PropTypes.string,
-        details: PropTypes.arrayOf(PropTypes.string),
-      })
+      }),
     ),
     skills: PropTypes.string,
     languages: PropTypes.string,

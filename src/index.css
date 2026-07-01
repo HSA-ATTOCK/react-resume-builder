@@ -1211,6 +1211,19 @@ textarea.input {
   to { transform: rotate(360deg); }
 }
 
+/* Tip message below zone */
+.upload-tip {
+  margin: 0.5rem 0 0;
+  font-size: 0.76rem;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.upload-tip strong {
+  color: #4b5563;
+}
+
 /* Error message below zone */
 .upload-error-msg {
   margin: 0.4rem 0 0;

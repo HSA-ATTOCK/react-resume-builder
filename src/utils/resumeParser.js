@@ -224,11 +224,79 @@ function parseEducation(lines) {
 }
 
 // ─── Experience Parser ────────────────────────────────────────────────────────
+//
+// Supports two common PDF formats:
+//
+// Format A (this builder's output — "Company — Date" anchor lines):
+//   Job Title
+//   Company (Location) — Date Range       ← em/en dash separates company from date
+//   • Responsibilities...
+//
+// Format B (generic — bare date lines):
+//   Job Title
+//   Company Name
+//   Jan 2020 - Dec 2022
+//   Responsibilities...
 
 function parseExperience(lines) {
   const entries = [];
-  let current = null;
+
+  // ── Format A detection ──────────────────────────────────────────────────────
+  // A "Company — Date" anchor line: contains " — " or " – " and ends with a year/present
+  const companyDateAnchor =
+    /^.+\s[—–]\s.{2,}(\d{4}|present|current|now)\b/i;
+
+  const anchorIndices = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (companyDateAnchor.test(lines[i])) anchorIndices.push(i);
+  }
+
+  if (anchorIndices.length > 0) {
+    // Structured approach:
+    // - The title is the line immediately BEFORE each anchor
+    // - The anchor itself contains "Company — Period"
+    // - Everything after the anchor up to the next title line is description
+    for (let a = 0; a < anchorIndices.length; a++) {
+      const anchorIdx  = anchorIndices[a];
+      const anchorLine = lines[anchorIdx];
+
+      // Title = line right before the anchor (skip if it's out of bounds)
+      const title = anchorIdx > 0 ? lines[anchorIdx - 1] : "";
+
+      // Split anchor on first em/en dash to get company and period
+      const dashMatch = anchorLine.match(/^(.+?)\s[—–]\s(.+)$/);
+      const company   = dashMatch ? dashMatch[1].trim() : "";
+      const period    = dashMatch ? dashMatch[2].trim() : anchorLine;
+
+      // Description: lines after anchor up to (but not including) the title
+      // line of the NEXT entry (which is anchorIndices[a+1] - 1)
+      const nextTitleIdx =
+        anchorIndices[a + 1] !== undefined
+          ? anchorIndices[a + 1] - 1
+          : lines.length;
+      const descLines = lines
+        .slice(anchorIdx + 1, nextTitleIdx)
+        .map((l) => l.replace(/^[•\-\*]\s*/, "").trim()) // strip leading bullets
+        .filter(Boolean);
+
+      // Join into a single paragraph (collapsed whitespace, no newlines)
+      const description = descLines.join(" ").replace(/\s+/g, " ").trim();
+
+      entries.push({
+        title,
+        company,
+        period,
+        details: [description],
+      });
+    }
+
+    return entries;
+  }
+
+  // ── Format B fallback — generic date-line detection ─────────────────────────
+  let current     = null;
   let detailLines = [];
+  let inDetails   = false;
 
   const datePattern =
     /\b(\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b.{0,25}(\d{4}|present|current|now)\b/i;
@@ -237,9 +305,16 @@ function parseExperience(lines) {
 
   const flush = () => {
     if (current) {
-      entries.push({ ...current, details: [detailLines.join("\n")] });
+      const description = detailLines
+        .map((l) => l.replace(/^[•\-\*]\s*/, "").trim())
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      entries.push({ ...current, details: [description] });
       detailLines = [];
-      current = null;
+      inDetails   = false;
+      current     = null;
     }
   };
 
@@ -253,16 +328,22 @@ function parseExperience(lines) {
     } else if (datePattern.test(line)) {
       if (current && !current.period) {
         current.period = line;
+        inDetails = false;
       } else {
         flush();
-        current = { title: "", company: "", period: line, details: [""] };
+        current   = { title: "", company: "", period: line, details: [""] };
+        inDetails = false;
       }
     } else if (current) {
-      if (!current.title) current.title = line;
-      else if (!current.company && line.length < 80) current.company = line;
-      else detailLines.push(line);
+      if (!current.title) {
+        current.title = line;
+      } else {
+        inDetails = true;
+        detailLines.push(line);
+      }
     } else {
-      current = { title: line, company: "", period: "", details: [""] };
+      current   = { title: line, company: "", period: "", details: [""] };
+      inDetails = false;
     }
   }
 

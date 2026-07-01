@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ResumeForm from "./components/ResumeForm";
 import ResumePreview from "./components/ResumePreview";
 import LoadingSpinner from "./components/LoadingSpinner";
+import ResumeUploader from "./components/ResumeUploader";
 
 // Initial form state
 const INITIAL_RESUME_DATA = {
@@ -67,6 +68,17 @@ function App() {
     }
   };
 
+  // Called by ResumeUploader after parsing — merges parsed data into form,
+  // preserving existing photo if none was extracted.
+  const handleResumeImport = (parsedData) => {
+    setFormData((prev) => ({
+      ...INITIAL_RESUME_DATA,
+      ...parsedData,
+      // Keep existing photo if the import didn't extract one
+      photo: parsedData.photo || prev.photo || "",
+    }));
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -86,6 +98,9 @@ function App() {
           >
             Reset All Fields
           </button>
+
+          {/* Upload existing resume to auto-fill the form */}
+          <ResumeUploader onDataExtracted={handleResumeImport} />
         </header>
 
         <div className="flex flex-col lg:flex-row gap-8">

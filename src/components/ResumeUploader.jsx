@@ -1,0 +1,145 @@
+/**
+ * ResumeUploader
+ *
+ * Drag-and-drop / click-to-browse panel that:
+ *  1. Accepts a PDF or DOCX file
+ *  2. Parses it via resumeParser utilities
+ *  3. Calls onDataExtracted(parsedData) to populate the form
+ */
+
+import React, { useRef, useState } from "react";
+import { extractTextFromFile, parseResumeText } from "../utils/resumeParser";
+
+function ResumeUploader({ onDataExtracted }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+  const [errorMsg, setErrorMsg] = useState("");
+  const inputRef = useRef(null);
+
+  const processFile = async (file) => {
+    if (!file) return;
+
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (!["pdf", "docx", "doc"].includes(ext)) {
+      setStatus("error");
+      setErrorMsg("Only PDF and DOCX files are supported.");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMsg("");
+
+    try {
+      const text = await extractTextFromFile(file);
+      const parsed = parseResumeText(text);
+      onDataExtracted(parsed);
+      setStatus("success");
+      // Reset to idle after a few seconds
+      setTimeout(() => setStatus("idle"), 4000);
+    } catch (err) {
+      console.error("Resume parse error:", err);
+      setStatus("error");
+      setErrorMsg(
+        err.message ||
+          "Could not parse this file. Make sure it's a valid PDF or DOCX."
+      );
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    processFile(file);
+  };
+
+  const handleInputChange = (e) => {
+    processFile(e.target.files[0]);
+    // Reset input so same file can be re-uploaded
+    e.target.value = "";
+  };
+
+  const handleClick = () => {
+    if (status !== "loading") inputRef.current?.click();
+  };
+
+  return (
+    <div className="resume-uploader-wrapper">
+      {/* ── Drop Zone ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload existing resume"
+        className={[
+          "resume-upload-zone",
+          isDragging ? "drag-active" : "",
+          status === "loading" ? "uploading" : "",
+          status === "success" ? "upload-success" : "",
+          status === "error" ? "upload-error-zone" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={handleClick}
+        onKeyDown={(e) => e.key === "Enter" && handleClick()}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,.docx,.doc"
+          onChange={handleInputChange}
+          style={{ display: "none" }}
+        />
+
+        {status === "loading" && (
+          <div className="upload-state">
+            <span className="upload-spinner" aria-hidden="true" />
+            <span>Reading your resume…</span>
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="upload-state success-state">
+            <span className="upload-check" aria-hidden="true">✅</span>
+            <span>
+              Resume imported! Review the fields below and make any edits.
+            </span>
+          </div>
+        )}
+
+        {(status === "idle" || status === "error") && (
+          <div className="upload-state idle-state">
+            <span className="upload-icon" aria-hidden="true">📄</span>
+            <p className="upload-label">
+              <strong>Upload Existing Resume</strong>
+            </p>
+            <p className="upload-hint">
+              Drag &amp; drop or click to browse &nbsp;·&nbsp; PDF or DOCX
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Error message ── */}
+      {status === "error" && errorMsg && (
+        <p className="upload-error-msg" role="alert">
+          ⚠️ {errorMsg}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default ResumeUploader;

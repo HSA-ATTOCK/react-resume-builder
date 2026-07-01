@@ -1107,3 +1107,114 @@ textarea.input {
     font-size: 0.95rem;
   }
 }
+
+/* ===== Resume Uploader ===== */
+.resume-uploader-wrapper {
+  margin: 1rem auto 0;
+  max-width: 520px;
+}
+
+.resume-upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.1rem 1.5rem;
+  border: 2px dashed #c7d2fe;
+  border-radius: 12px;
+  background: #f5f7ff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  min-height: 72px;
+  user-select: none;
+}
+
+.resume-upload-zone:hover,
+.resume-upload-zone:focus-visible {
+  border-color: #6366f1;
+  background: #eef0ff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  outline: none;
+}
+
+.resume-upload-zone.drag-active {
+  border-color: #4f46e5;
+  background: #e0e7ff;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+
+.resume-upload-zone.upload-success {
+  border-color: #10b981;
+  background: #ecfdf5;
+  cursor: default;
+}
+
+.resume-upload-zone.upload-error-zone {
+  border-color: #f87171;
+  background: #fff5f5;
+}
+
+.resume-upload-zone.uploading {
+  cursor: wait;
+  opacity: 0.8;
+}
+
+/* State layouts */
+.upload-state {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.idle-state {
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.success-state {
+  color: #065f46;
+  font-weight: 500;
+}
+
+.upload-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.upload-label {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #1e293b;
+}
+
+.upload-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+/* Spinner */
+.upload-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: uploader-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes uploader-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error message below zone */
+.upload-error-msg {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+  text-align: center;
+}
